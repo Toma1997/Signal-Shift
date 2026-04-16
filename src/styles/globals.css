@@ -1,0 +1,196 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: Inter, Aptos, system-ui, sans-serif;
+  color: #e8edf4;
+  background: #0f1620;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top, #1a2533 0%, #0f1620 55%, #091018 100%);
+}
+
+body {
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.screen {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.center-screen {
+  min-height: calc(100vh - 48px);
+  display: grid;
+  place-items: center;
+}
+
+.hero-card,
+.panel {
+  border: 1px solid rgba(126, 155, 194, 0.2);
+  background: rgba(14, 22, 31, 0.82);
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+}
+
+.hero-card {
+  width: min(680px, 100%);
+  padding: 32px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7ed7b7;
+  font-size: 12px;
+}
+
+.hero-card h1,
+.hero-card h2 {
+  margin: 0 0 12px;
+}
+
+.primary-btn,
+.secondary-btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 18px;
+  cursor: pointer;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #4dd0a7, #2d8dca);
+  color: #091018;
+  font-weight: 700;
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8edf4;
+}
+
+.button-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.game-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.camera-card {
+  min-height: 88px;
+  min-width: 260px;
+  padding: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+}
+
+.canvas-panel {
+  min-height: 520px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.canvas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.lane {
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+}
+
+.canvas-empty {
+  flex: 1;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  display: grid;
+  place-items: center;
+  color: #93a8bd;
+}
+
+.hud-panel {
+  padding: 18px;
+}
+
+.hud-panel h3 {
+  margin-top: 0;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sensor-panel {
+  padding: 14px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sensor-chip {
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #dce6f2;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .top-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .camera-card {
+    min-width: 0;
+  }
+}
