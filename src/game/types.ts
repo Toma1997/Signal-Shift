@@ -3,18 +3,21 @@ export type Screen =
   | "setup"
   | "calibration"
   | "playing"
+  | "paused"
   | "results";
 
 export type Lane = 0 | 1 | 2;
 
 export type SignalKind = "calm" | "focus" | "noise" | "glitch";
 
-export interface FallingSignal {
+export interface FallingObject {
   id: string;
+  kind: SignalKind;
   lane: Lane;
   y: number;
   speed: number;
-  kind: SignalKind;
+  spawnedAtMs: number;
+  labelVisible: boolean;
 }
 
 export interface ScoreSummary {
@@ -29,4 +32,22 @@ export interface SensorSnapshot {
   focus: number;
   signalQuality: "low" | "medium" | "high";
   mode: "balanced" | "calm" | "pressure";
+}
+
+export interface GameState {
+  screen: Screen;
+  startedAtMs: number | null;
+  nowMs: number;
+  playerLane: Lane;
+  objects: FallingObject[];
+  score: ScoreSummary;
+  stability: number;
+  corruption: number;
+  combo: number;
+  itemsCaught: number;
+  itemsMissed: number;
+  spawnIntervalMs: number;
+  lastSpawnAtMs: number;
+  isRunning: boolean;
+  isGameOver: boolean;
 }

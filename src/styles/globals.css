@@ -106,11 +106,13 @@ button {
 }
 
 .camera-card {
-  min-height: 88px;
+  min-height: 120px;
   min-width: 260px;
   padding: 18px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
 }
 
 .main-grid {
@@ -125,6 +127,12 @@ button {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.play-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .canvas-grid {
@@ -155,7 +163,14 @@ button {
 }
 
 .hud-panel h3 {
-  margin-top: 0;
+  margin: 0 0 12px;
+}
+
+.hud-copy {
+  margin: 0 0 16px;
+  color: #93a8bd;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .stat-row {
@@ -165,11 +180,70 @@ button {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.stat-label {
+  color: #93a8bd;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(77, 208, 167, 0.14);
+  color: #8af1cb;
+}
+
+.status-badge.is-over {
+  background: rgba(232, 121, 249, 0.14);
+  color: #f0abfc;
+}
+
+.status-badge.is-idle {
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+}
+
+.hud-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
 .sensor-panel {
   padding: 14px 18px;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.telemetry-strip {
+  min-height: 84px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.placeholder-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #dce6f2;
+}
+
+.placeholder-copy {
+  margin: 0;
+  color: #93a8bd;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .sensor-chip {
@@ -188,6 +262,11 @@ button {
   .top-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .telemetry-strip {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .camera-card {

@@ -1,26 +1,34 @@
 import { GameCanvas } from "../components/GameCanvas";
 import { HudPanel } from "../components/HudPanel";
-import { SensorPanel } from "../components/SensorPanel";
-import { useGameStore } from "../../store/gameStore";
 
 export function GameScreen() {
-  const setScreen = useGameStore((state) => state.setScreen);
-
   return (
     <section className="screen game-layout">
       <div className="top-bar">
-        <div className="camera-card panel">Camera Preview Placeholder</div>
-        <button className="secondary-btn" onClick={() => setScreen("results")}>
-          End Mock Run
-        </button>
+        <div className="panel camera-card">
+          <p className="placeholder-title">Camera</p>
+          <p className="placeholder-copy">
+            Day 3 placeholder for camera-reactive overlays and live video input.
+          </p>
+        </div>
       </div>
 
       <div className="main-grid">
-        <GameCanvas />
+        <div className="play-stack">
+          <GameCanvas />
+          <div className="panel telemetry-strip">
+            <div>
+              <p className="placeholder-title">Telemetry</p>
+              <p className="placeholder-copy">
+                Reserved for future EEG, BPM, and quality signals. Day 2 keeps this as a clean
+                placeholder.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <HudPanel />
       </div>
-
-      <SensorPanel />
     </section>
   );
 }
