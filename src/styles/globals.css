@@ -115,6 +115,57 @@ button {
   gap: 8px;
 }
 
+.camera-panel {
+  min-height: 120px;
+  min-width: 260px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.camera-panel__header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.camera-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.camera-panel__viewport {
+  min-height: 118px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(148, 163, 184, 0.04), rgba(15, 23, 42, 0.48)),
+    rgba(7, 16, 26, 0.92);
+  overflow: hidden;
+}
+
+.camera-panel__viewport.is-live {
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.12);
+}
+
+.camera-panel__empty {
+  min-height: 118px;
+  display: grid;
+  place-items: center;
+  color: #93a8bd;
+  font-size: 14px;
+}
+
+.camera-panel__footer {
+  margin: 0;
+  color: #93a8bd;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 .main-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
@@ -160,10 +211,38 @@ button {
 
 .hud-panel {
   padding: 18px;
+  min-width: 0;
 }
 
-.hud-panel h3 {
-  margin: 0 0 12px;
+.hud-panel__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.hud-panel__title {
+  margin: 0 0 8px;
+}
+
+.hud-panel__badges {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.hud-panel__badge-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hud-panel__badge-label {
+  color: #93a8bd;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .hud-copy {
@@ -171,6 +250,7 @@ button {
   color: #93a8bd;
   font-size: 14px;
   line-height: 1.5;
+  max-width: 28ch;
 }
 
 .stat-row {
@@ -182,6 +262,81 @@ button {
 
 .stat-label {
   color: #93a8bd;
+}
+
+.hud-stat-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.hud-stat-card {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hud-stat-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.hud-stat-card__label {
+  color: #93a8bd;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-stat-card__value {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.hud-stat-card.is-placeholder .hud-stat-card__value,
+.hud-stat-card.is-placeholder .hud-stat-card__detail {
+  color: #a5b4c6;
+}
+
+.hud-stat-card__detail {
+  margin: 8px 0 0;
+  color: #93a8bd;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.hud-stat-card__meter {
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.hud-stat-card__meter-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4dd0a7, #2d8dca);
+}
+
+.hud-stat-card--warn .hud-stat-card__meter-fill {
+  background: linear-gradient(90deg, #f59e0b, #fb923c);
+}
+
+.hud-stat-card--danger .hud-stat-card__meter-fill {
+  background: linear-gradient(90deg, #ef4444, #e879f9);
+}
+
+.hud-compact-list {
+  margin-top: 16px;
 }
 
 .status-badge {
@@ -207,6 +362,96 @@ button {
   color: #cbd5e1;
 }
 
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #dce6f2;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-chip--good {
+  background: rgba(77, 208, 167, 0.14);
+  color: #8af1cb;
+}
+
+.status-chip--info {
+  background: rgba(56, 189, 248, 0.14);
+  color: #93c5fd;
+}
+
+.status-chip--warn {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fdba74;
+}
+
+.mode-badge,
+.event-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mode-badge {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8edf4;
+  text-transform: capitalize;
+}
+
+.mode-badge--balanced {
+  background: rgba(56, 189, 248, 0.14);
+  color: #93c5fd;
+}
+
+.mode-badge--calm {
+  background: rgba(77, 208, 167, 0.14);
+  color: #8af1cb;
+}
+
+.mode-badge--pressure {
+  background: rgba(232, 121, 249, 0.14);
+  color: #f0abfc;
+}
+
+.event-badge {
+  background: rgba(255, 255, 255, 0.06);
+  color: #dce6f2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud-controls {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hud-controls__title {
+  display: block;
+  margin-bottom: 8px;
+  color: #93a8bd;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hud-controls__copy {
+  margin: 0;
+  color: #dce6f2;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .hud-actions {
   display: flex;
   flex-direction: column;
@@ -228,6 +473,60 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.telemetry-strip__metric {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.telemetry-strip__metric.is-emphasis {
+  flex: 1.2 1 0;
+}
+
+.telemetry-strip__label {
+  color: #93a8bd;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.telemetry-strip__value {
+  color: #e8edf4;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.telemetry-strip__unit {
+  color: #93a8bd;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.telemetry-strip__flag {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .placeholder-title {
@@ -267,6 +566,7 @@ button {
   .telemetry-strip {
     flex-direction: column;
     align-items: flex-start;
+    flex-wrap: wrap;
   }
 
   .camera-card {

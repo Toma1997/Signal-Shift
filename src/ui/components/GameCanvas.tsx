@@ -87,6 +87,8 @@ export function GameCanvas() {
         ref={canvasRef}
         width={GAME_CANVAS_WIDTH}
         height={GAME_CANVAS_HEIGHT}
+        tabIndex={0}
+        aria-label="Signal Shift game canvas"
         style={{
           display: "block",
           width: "100%",
