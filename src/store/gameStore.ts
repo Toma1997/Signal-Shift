@@ -1,12 +1,17 @@
 import { create } from "zustand";
 import { initialSpawnIntervalMs } from "../game/constants";
 import {
+  applyPressureToSpawnObject,
+  getSpawnIntervalMs,
+} from "../game/difficulty";
+import {
   advanceObjects,
   isObjectCatchable,
   isObjectMissed,
 } from "../game/engine";
 import { scoreCatch, scoreMiss, shouldGameOver } from "../game/scoring";
 import { spawnRandomObject } from "../game/spawn";
+import { useSensorStore } from "./sensorStore";
 import type { FallingObject, GameState, Lane, Screen } from "../game/types";
 
 function createInitialScore() {
@@ -62,8 +67,8 @@ function applyScoreDelta(
   return {
     score: {
       score: Math.max(0, state.score.score + delta.scoreDelta),
-      sorted: state.score.sorted + (delta.scoreDelta > 0 ? 1 : 0),
-      missed: state.score.missed,
+      sorted: state.score.sorted + delta.sortedDelta,
+      missed: state.score.missed + delta.missedDelta,
       survivedSeconds: nextSurvivedSeconds,
     },
     stability: nextStability,
@@ -77,7 +82,7 @@ function applyMissDelta(
   object: FallingObject,
   nextSurvivedSeconds: number,
 ) {
-  const delta = scoreMiss(object.kind);
+  const delta = scoreMiss(object.kind, object.lane);
   const nextStability = clamp(state.stability + delta.stabilityDelta, 0, 100);
   const nextCorruption = clamp(state.corruption + delta.corruptionDelta, 0, 100);
   const nextCombo = delta.resetCombo ? 0 : Math.max(0, state.combo + delta.comboDelta);
@@ -85,8 +90,8 @@ function applyMissDelta(
   return {
     score: {
       score: Math.max(0, state.score.score + delta.scoreDelta),
-      sorted: state.score.sorted,
-      missed: state.score.missed + 1,
+      sorted: state.score.sorted + delta.sortedDelta,
+      missed: state.score.missed + delta.missedDelta,
       survivedSeconds: nextSurvivedSeconds,
     },
     stability: nextStability,
@@ -156,17 +161,85 @@ export const useGameStore = create<GameStore>((set, get) => ({
     })),
   tick: (nowMs) =>
     set((state) => {
+      if (!state.isRunning || state.isGameOver) {
+        return {
+          nowMs,
+          score: {
+            ...state.score,
+            survivedSeconds: getSurvivedSeconds(state, nowMs),
+          },
+        };
+      }
+
       const dtSeconds =
         state.nowMs === 0 ? 0 : Math.max(0, (nowMs - state.nowMs) / 1000);
-
-      return {
+      const sensorState = useSensorStore.getState();
+      const elapsedMs =
+        state.startedAtMs == null ? 0 : Math.max(0, nowMs - state.startedAtMs);
+      const nextSpawnIntervalMs = getSpawnIntervalMs({
+        elapsedMs,
+        pressure: sensorState.pressureLevel,
+        signalReliable: sensorState.signalReliable,
+      });
+      const advancedObjects =
+        dtSeconds > 0 ? advanceObjects(state.objects, dtSeconds) : state.objects;
+      const nextSurvivedSeconds = getSurvivedSeconds(state, nowMs);
+      let nextState: GameState = {
+        ...state,
         nowMs,
-        objects: dtSeconds > 0 ? advanceObjects(state.objects, dtSeconds) : state.objects,
+        objects: advancedObjects,
+        spawnIntervalMs: nextSpawnIntervalMs,
         score: {
           ...state.score,
-          survivedSeconds: getSurvivedSeconds(state, nowMs),
+          survivedSeconds: nextSurvivedSeconds,
         },
       };
+
+      if (nowMs - nextState.lastSpawnAtMs >= nextState.spawnIntervalMs) {
+        const nextObject = applyPressureToSpawnObject(
+          spawnRandomObject(nowMs),
+          sensorState.pressureLevel,
+          sensorState.signalReliable,
+        );
+
+        nextState = {
+          ...nextState,
+          objects: [...nextState.objects, nextObject],
+          lastSpawnAtMs: nowMs,
+        };
+      }
+
+      const remaining: FallingObject[] = [];
+
+      for (const object of nextState.objects) {
+        if (!isObjectMissed(object)) {
+          remaining.push(object);
+          continue;
+        }
+
+        const missValues = applyMissDelta(nextState, object, nextSurvivedSeconds);
+        nextState = {
+          ...nextState,
+          ...missValues,
+          itemsMissed: nextState.itemsMissed + 1,
+        };
+      }
+
+      nextState = {
+        ...nextState,
+        objects: remaining,
+      };
+
+      if (shouldGameOver(nextState.stability, nextState.corruption)) {
+        return {
+          ...nextState,
+          isRunning: false,
+          isGameOver: true,
+          screen: "results",
+        };
+      }
+
+      return nextState;
     }),
   spawnObject: () =>
     set((state) => {
@@ -174,8 +247,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return state;
       }
 
+      const sensorState = useSensorStore.getState();
+      const nextObject = applyPressureToSpawnObject(
+        spawnRandomObject(state.nowMs),
+        sensorState.pressureLevel,
+        sensorState.signalReliable,
+      );
+
       return {
-        objects: [...state.objects, spawnRandomObject(state.nowMs)],
+        objects: [...state.objects, nextObject],
         lastSpawnAtMs: state.nowMs,
       };
     }),
@@ -194,7 +274,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       const nextSurvivedSeconds = getSurvivedSeconds(state, state.nowMs);
-      const delta = scoreCatch(target.kind);
+      const delta = scoreCatch(target.kind, target.lane);
       const nextValues = applyScoreDelta(state, delta, nextSurvivedSeconds);
       const nextState = {
         ...state,

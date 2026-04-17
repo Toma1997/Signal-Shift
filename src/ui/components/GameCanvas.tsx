@@ -53,9 +53,10 @@ export function GameCanvas() {
 
     const resizeCanvas = () => {
       const rect = panel.getBoundingClientRect();
-      const maxWidth = Math.max(320, Math.floor(rect.width - 24));
-      const maxHeight = Math.max(220, Math.floor(rect.height - 24));
+      const maxWidth = Math.max(260, Math.floor(rect.width - 16));
+      const maxHeight = Math.max(180, Math.floor(rect.height - 16));
       const aspectRatio = GAME_CANVAS_WIDTH / GAME_CANVAS_HEIGHT;
+      const devicePixelRatio = window.devicePixelRatio || 1;
 
       let nextWidth = maxWidth;
       let nextHeight = Math.floor(nextWidth / aspectRatio);
@@ -65,29 +66,24 @@ export function GameCanvas() {
         nextWidth = Math.floor(nextHeight * aspectRatio);
       }
 
-      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
-        canvas.width = nextWidth;
-        canvas.height = nextHeight;
+      const physicalWidth = Math.floor(nextWidth * devicePixelRatio);
+      const physicalHeight = Math.floor(nextHeight * devicePixelRatio);
+
+      if (canvas.width !== physicalWidth || canvas.height !== physicalHeight) {
+        canvas.width = physicalWidth;
+        canvas.height = physicalHeight;
       }
+
+      canvas.style.width = `${nextWidth}px`;
+      canvas.style.height = `${nextHeight}px`;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     };
 
     const render = (timestamp: number) => {
-      resizeCanvas();
-
       const store = useGameStore.getState();
       store.tick(timestamp);
 
-      let snapshot = useGameStore.getState();
-      if (
-        snapshot.isRunning &&
-        timestamp - snapshot.lastSpawnAtMs >= snapshot.spawnIntervalMs
-      ) {
-        snapshot.spawnObject();
-        snapshot = useGameStore.getState();
-      }
-
-      snapshot.removeMissedObjects();
-      snapshot = useGameStore.getState();
+      const snapshot = useGameStore.getState();
       drawGameFrame(ctx, {
         playerLane: snapshot.playerLane,
         objects: snapshot.objects,
@@ -98,6 +94,7 @@ export function GameCanvas() {
       frameId = window.requestAnimationFrame(render);
     };
 
+    resizeCanvas();
     frameId = window.requestAnimationFrame(render);
     window.addEventListener("resize", resizeCanvas);
 

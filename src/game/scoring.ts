@@ -1,4 +1,4 @@
-import type { SignalKind } from "./types";
+import type { Lane, SignalKind } from "./types";
 
 export interface ScoreDelta {
   scoreDelta: number;
@@ -6,78 +6,116 @@ export interface ScoreDelta {
   corruptionDelta: number;
   comboDelta: number;
   resetCombo: boolean;
+  sortedDelta: number;
+  missedDelta: number;
 }
 
-export function scoreCatch(kind: SignalKind): ScoreDelta {
+export function getTargetLane(kind: SignalKind): Lane {
   switch (kind) {
-    case "calm":
+    case "stable_signal":
+      return 0;
+    case "charge_signal":
+      return 1;
+    case "interference":
+    case "anomaly":
+      return 2;
+  }
+}
+
+export function isCorrectLane(kind: SignalKind, lane: Lane): boolean {
+  return getTargetLane(kind) === lane;
+}
+
+export function scoreCatch(kind: SignalKind, lane: Lane): ScoreDelta {
+  const routedCorrectly = isCorrectLane(kind, lane);
+
+  switch (kind) {
+    case "stable_signal":
       return {
-        scoreDelta: 8,
-        stabilityDelta: 4,
+        scoreDelta: routedCorrectly ? 8 : 0,
+        stabilityDelta: routedCorrectly ? 4 : -2,
         corruptionDelta: 0,
         comboDelta: 0,
         resetCombo: false,
+        sortedDelta: routedCorrectly ? 1 : 0,
+        missedDelta: routedCorrectly ? 0 : 1,
       };
-    case "focus":
+    case "charge_signal":
       return {
-        scoreDelta: 10,
+        scoreDelta: routedCorrectly ? 10 : 0,
         stabilityDelta: 0,
         corruptionDelta: 0,
-        comboDelta: 1,
-        resetCombo: false,
+        comboDelta: routedCorrectly ? 1 : 0,
+        resetCombo: !routedCorrectly,
+        sortedDelta: routedCorrectly ? 1 : 0,
+        missedDelta: routedCorrectly ? 0 : 1,
       };
-    case "noise":
+    case "interference":
       return {
-        scoreDelta: 6,
+        scoreDelta: routedCorrectly ? 6 : 0,
         stabilityDelta: 0,
-        corruptionDelta: 0,
+        corruptionDelta: routedCorrectly ? 0 : 2,
         comboDelta: 0,
         resetCombo: false,
+        sortedDelta: routedCorrectly ? 1 : 0,
+        missedDelta: routedCorrectly ? 0 : 1,
       };
-    case "glitch":
+    case "anomaly":
       return {
-        scoreDelta: 0,
-        stabilityDelta: -10,
-        corruptionDelta: 8,
+        scoreDelta: routedCorrectly ? 2 : 0,
+        stabilityDelta: routedCorrectly ? -2 : -6,
+        corruptionDelta: routedCorrectly ? 2 : 6,
         comboDelta: 0,
         resetCombo: false,
+        sortedDelta: routedCorrectly ? 1 : 0,
+        missedDelta: routedCorrectly ? 0 : 1,
       };
   }
 }
 
-export function scoreMiss(kind: SignalKind): ScoreDelta {
+export function scoreMiss(kind: SignalKind, lane: Lane): ScoreDelta {
+  const routedCorrectly = isCorrectLane(kind, lane);
+
   switch (kind) {
-    case "calm":
+    case "stable_signal":
       return {
         scoreDelta: 0,
-        stabilityDelta: -4,
+        stabilityDelta: routedCorrectly ? -4 : 0,
         corruptionDelta: 0,
         comboDelta: 0,
         resetCombo: false,
+        sortedDelta: 0,
+        missedDelta: routedCorrectly ? 1 : 0,
       };
-    case "focus":
+    case "charge_signal":
       return {
         scoreDelta: 0,
         stabilityDelta: 0,
         corruptionDelta: 0,
         comboDelta: 0,
-        resetCombo: true,
+        resetCombo: routedCorrectly,
+        sortedDelta: 0,
+        missedDelta: routedCorrectly ? 1 : 0,
       };
-    case "noise":
+    case "interference":
       return {
         scoreDelta: 0,
         stabilityDelta: 0,
         corruptionDelta: 0,
         comboDelta: 0,
         resetCombo: false,
+        sortedDelta: routedCorrectly ? 1 : 0,
+        missedDelta: 0,
       };
-    case "glitch":
+    case "anomaly":
       return {
         scoreDelta: 0,
-        stabilityDelta: -8,
-        corruptionDelta: 10,
+        stabilityDelta: routedCorrectly ? -2 : -8,
+        corruptionDelta: routedCorrectly ? 3 : 10,
         comboDelta: 0,
         resetCombo: false,
+        sortedDelta: routedCorrectly ? 1 : 0,
+        missedDelta: routedCorrectly ? 0 : 1,
       };
   }
 }

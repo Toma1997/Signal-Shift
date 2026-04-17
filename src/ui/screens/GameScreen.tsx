@@ -7,10 +7,12 @@ import { useSensorStore } from "../../store/sensorStore";
 
 export function GameScreen() {
   const sensors = useSensorStore((state) => state.sensors);
+  const webcam = useSensorStore((state) => state.webcam);
+  const rppgStatus = useSensorStore((state) => state.rppgStatus);
 
   return (
     <section
-      className="screen screen--gameplay game-layout"
+      className="screen screen--gameplay game-layout game-layout--fixed"
       tabIndex={-1}
       aria-label="Gameplay screen"
     >
@@ -19,15 +21,25 @@ export function GameScreen() {
         hud={<HudPanel modeIsPlaceholder />}
         camera={
           <CameraPanel
-            title="Camera"
-            isLive
-            emptyLabel="Camera preview"
-            isPlaceholder
+            title="Live Camera"
+            emptyLabel="Camera feed unavailable"
+            isPlaceholder={false}
+            showControls={false}
             statusChips={[
-              { label: "Camera ready", tone: "good" },
-              { label: "Sim EEG", tone: "info" },
-              { label: "Signal OK", tone: "neutral" },
+              {
+                label: webcam.isStreaming ? "Camera linked" : "Camera offline",
+                tone: webcam.isStreaming ? "good" : "neutral",
+              },
+              {
+                label: rppgStatus === "running" ? "BPM active" : "BPM idle",
+                tone: rppgStatus === "running" ? "good" : "info",
+              },
             ]}
+            footerText={
+              webcam.isStreaming
+                ? "Live camera persists into gameplay and continues feeding BPM."
+                : "Return to calibration if the camera feed stops."
+            }
           />
         }
         telemetry={
@@ -39,7 +51,7 @@ export function GameScreen() {
               {
                 id: "activity",
                 label: "Activity",
-                value: `Sim ${sensors.mode}`,
+                value: `Sim ${sensors.mode} pressure`,
                 emphasis: true,
                 isPlaceholder: true,
               },

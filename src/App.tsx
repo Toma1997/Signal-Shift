@@ -7,8 +7,10 @@ import { ResultsScreen } from "./ui/screens/ResultsScreen";
 
 export default function App() {
   const screen = useGameStore((state) => state.screen);
-  const appShellClassName =
-    screen === "playing" ? "app-shell app-shell--gameplay" : "app-shell";
+  const isGameplayScreen = screen === "playing";
+  const appShellClassName = isGameplayScreen
+    ? "app-shell app-shell--gameplay"
+    : "app-shell";
 
   return (
     <div className={appShellClassName}>

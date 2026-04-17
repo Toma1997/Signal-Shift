@@ -8,7 +8,11 @@ export type Screen =
 
 export type Lane = 0 | 1 | 2;
 
-export type SignalKind = "calm" | "focus" | "noise" | "glitch";
+export type SignalKind =
+  | "stable_signal"
+  | "charge_signal"
+  | "interference"
+  | "anomaly";
 
 export interface FallingObject {
   id: string;

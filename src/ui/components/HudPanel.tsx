@@ -1,20 +1,15 @@
 import { useMemo } from "react";
+import { SIGNAL_KIND_LABELS, SIGNAL_ROUTING_LANES } from "../../game/constants";
 import { HudStatCard } from "./HudStatCard";
 import { ModeBadge } from "./ModeBadge";
 import { useGameStore } from "../../store/gameStore";
 import { useSensorStore } from "../../store/sensorStore";
 
 export interface HudPanelProps {
-  panicPlaceholder?: number;
-  clarityPlaceholder?: number;
   modeIsPlaceholder?: boolean;
 }
 
-export function HudPanel({
-  panicPlaceholder = 28,
-  clarityPlaceholder = 74,
-  modeIsPlaceholder = true,
-}: HudPanelProps) {
+export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
   const score = useGameStore((state) => state.score);
   const stability = useGameStore((state) => state.stability);
   const corruption = useGameStore((state) => state.corruption);
@@ -26,6 +21,11 @@ export function HudPanel({
   const startRun = useGameStore((state) => state.startRun);
   const resetRun = useGameStore((state) => state.resetRun);
   const mode = useSensorStore((state) => state.sensors.mode);
+  const heartReading = useSensorStore((state) => state.heartReading);
+  const baselineBpm = useSensorStore((state) => state.baselineBpm);
+  const heartSignalQuality = useSensorStore((state) => state.heartSignalQuality);
+  const pressureLevel = useSensorStore((state) => state.pressureLevel);
+  const bpmDeltaPct = useSensorStore((state) => state.bpmDeltaPct);
 
   const statusLabel = isGameOver ? "Game Over" : isRunning ? "Running" : "Idle";
   const statusClass = isGameOver
@@ -40,7 +40,9 @@ export function HudPanel({
     }
 
     const nearest = [...objects].sort((a, b) => b.y - a.y)[0];
-    return `${nearest.kind} inbound`;
+    const signalLabel = SIGNAL_KIND_LABELS[nearest.kind];
+    const routeLabel = SIGNAL_ROUTING_LANES[nearest.kind];
+    return `${signalLabel} -> ${routeLabel}`;
   }, [isRunning, objects]);
 
   return (
@@ -48,7 +50,7 @@ export function HudPanel({
       <div className="hud-panel__top">
         <div>
           <h3 className="hud-panel__title">Signal Control</h3>
-          <p className="hud-copy">Run state, reactor health, and lane-ready feedback.</p>
+          <p className="hud-copy">Track reactor health and route incoming traffic.</p>
         </div>
         <div className={statusClass}>{statusLabel}</div>
       </div>
@@ -79,20 +81,22 @@ export function HudPanel({
           meterValue={stability}
         />
         <HudStatCard
-          label="Panic"
-          value={`${panicPlaceholder}%`}
-          detail="Simulated until biometric stress input"
+          label="Pressure"
+          value={`${Math.round(pressureLevel)}%`}
+          detail={
+            bpmDeltaPct != null
+              ? `${bpmDeltaPct >= 0 ? "+" : ""}${bpmDeltaPct.toFixed(1)}% vs baseline`
+              : "Holding safe fallback until baseline is ready"
+          }
           tone="warn"
-          meterValue={panicPlaceholder}
-          placeholder
+          meterValue={pressureLevel}
         />
         <HudStatCard
-          label="Clarity"
-          value={`${clarityPlaceholder}%`}
-          detail="Simulated until EEG-derived clarity"
+          label="Signal Quality"
+          value={`${Math.round(heartSignalQuality * 100)}%`}
+          detail="Camera-derived reading reliability"
           tone="neutral"
-          meterValue={clarityPlaceholder}
-          placeholder
+          meterValue={heartSignalQuality * 100}
         />
       </div>
 
@@ -104,6 +108,14 @@ export function HudPanel({
         <div className="stat-row">
           <span className="stat-label">Combo</span>
           <strong>{combo}</strong>
+        </div>
+        <div className="stat-row">
+          <span className="stat-label">Live BPM</span>
+          <strong>{heartReading ? heartReading.bpm.toFixed(1) : "--"}</strong>
+        </div>
+        <div className="stat-row">
+          <span className="stat-label">Baseline BPM</span>
+          <strong>{baselineBpm != null ? baselineBpm.toFixed(1) : "--"}</strong>
         </div>
         <div className="stat-row">
           <span className="stat-label">Player Lane</span>
@@ -120,6 +132,10 @@ export function HudPanel({
         <p className="hud-controls__copy">
           Left/Right to shift lanes. Space to catch in the active lane.
         </p>
+        <span className="hud-controls__title">Routing Guide</span>
+        <p className="hud-controls__copy">Stabilize: Stable Signal</p>
+        <p className="hud-controls__copy">Convert: Charge Signal</p>
+        <p className="hud-controls__copy">Discard: Interference and Anomaly</p>
       </div>
 
       <div className="hud-actions">

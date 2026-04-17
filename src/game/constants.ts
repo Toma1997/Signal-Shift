@@ -4,11 +4,25 @@ export const APP_NAME = "Signal Shift";
 
 export const LANE_LABELS = ["Stabilize", "Convert", "Discard"] as const;
 
+export const SIGNAL_KIND_LABELS: Record<SignalKind, string> = {
+  stable_signal: "stable signal",
+  charge_signal: "charge signal",
+  interference: "interference",
+  anomaly: "anomaly",
+};
+
 export const SIGNAL_KIND_MEANINGS: Record<SignalKind, string> = {
-  calm: "healthy signal",
-  focus: "useful signal",
-  noise: "discardable unstable signal",
-  glitch: "dangerous hostile fragment",
+  stable_signal: "stabilized reactor material that belongs in the Stabilize lane",
+  charge_signal: "convertible energy packet that belongs in the Convert lane",
+  interference: "discardable signal clutter that belongs in the Discard lane",
+  anomaly: "hostile system fragment that belongs in the Discard lane",
+};
+
+export const SIGNAL_ROUTING_LANES: Record<SignalKind, (typeof LANE_LABELS)[number]> = {
+  stable_signal: "Stabilize",
+  charge_signal: "Convert",
+  interference: "Discard",
+  anomaly: "Discard",
 };
 
 export const laneCount = 3;

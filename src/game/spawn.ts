@@ -6,10 +6,10 @@ import {
 import type { FallingObject, Lane, SignalKind } from "./types";
 
 const KIND_TABLE: Array<{ kind: SignalKind; weight: number }> = [
-  { kind: "calm", weight: 3 },
-  { kind: "focus", weight: 3 },
-  { kind: "noise", weight: 3 },
-  { kind: "glitch", weight: 1.5 },
+  { kind: "stable_signal", weight: 3 },
+  { kind: "charge_signal", weight: 3 },
+  { kind: "interference", weight: 3 },
+  { kind: "anomaly", weight: 1.5 },
 ];
 
 const TOTAL_WEIGHT = KIND_TABLE.reduce((sum, entry) => sum + entry.weight, 0);
@@ -28,7 +28,7 @@ function randomKind(): SignalKind {
     }
   }
 
-  return "noise";
+  return "interference";
 }
 
 function randomSpeed(): number {

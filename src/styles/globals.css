@@ -36,9 +36,14 @@ button {
 }
 
 .app-shell--gameplay {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
   padding: 12px;
+  overflow: hidden;
 }
 
 .screen {
@@ -50,6 +55,7 @@ button {
   width: 100%;
   height: 100%;
   min-height: 0;
+  max-width: 1440px;
 }
 
 .center-screen {
@@ -107,6 +113,32 @@ button {
   display: flex;
   gap: 12px;
   margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.instructions-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 8, 14, 0.7);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 20;
+}
+
+.instructions-modal {
+  width: min(620px, 100%);
+  padding: 28px;
+}
+
+.instructions-modal h2 {
+  margin-top: 0;
+}
+
+.instructions-modal p {
+  margin: 0 0 12px;
+  color: #dce6f2;
+  line-height: 1.45;
 }
 
 .game-layout {
@@ -117,13 +149,46 @@ button {
   overflow: hidden;
 }
 
+.game-layout--fixed {
+  width: 100%;
+}
+
+.game-layout--fixed .game-frame,
+.game-layout--fixed .game-frame__main,
+.game-layout--fixed .game-frame__center,
+.game-layout--fixed .game-frame__rail,
+.game-layout--fixed .game-frame__camera,
+.game-layout--fixed .game-frame__hud,
+.game-layout--fixed .game-frame__telemetry {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.game-layout--fixed .game-frame {
+  grid-template-rows: minmax(0, 1fr) minmax(56px, 72px);
+  gap: 12px;
+}
+
+.game-layout--fixed .game-frame__main {
+  gap: 12px;
+}
+
+.game-layout--fixed .game-frame__rail {
+  grid-template-rows: minmax(220px, 36%) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.game-layout--fixed .game-frame__telemetry {
+  height: auto;
+}
+
 .camera-panel {
   min-height: 0;
   min-width: 0;
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   position: relative;
   overflow: hidden;
 }
@@ -131,13 +196,13 @@ button {
 .camera-panel__header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .camera-panel__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .camera-panel__viewport {
@@ -151,6 +216,26 @@ button {
   overflow: hidden;
 }
 
+.camera-panel__video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.camera-panel__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.camera-panel__actions .primary-btn,
+.camera-panel__actions .secondary-btn {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
 .camera-panel__viewport.is-live {
   box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.12);
 }
@@ -161,9 +246,9 @@ button {
   display: grid;
   place-items: center;
   color: #93a8bd;
-  font-size: 14px;
+  font-size: 13px;
   text-align: center;
-  padding: 12px;
+  padding: 8px;
 }
 
 .camera-panel__footer {
@@ -196,9 +281,9 @@ button {
 .canvas-panel {
   min-height: 0;
   height: 100%;
-  padding: 12px;
+  padding: 8px;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   overflow: hidden;
 }
@@ -206,18 +291,20 @@ button {
 .game-canvas {
   display: block;
   width: auto;
-  height: 100%;
+  height: auto;
   max-width: 100%;
   max-height: 100%;
   border-radius: 14px;
 }
 
 .hud-panel {
-  padding: 14px;
+  padding: 12px;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
-  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
 }
 
 .hud-panel__top {
@@ -230,12 +317,13 @@ button {
 
 .hud-panel__title {
   margin: 0 0 8px;
+  font-size: 1rem;
 }
 
 .hud-panel__badges {
   display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 0;
 }
 
 .hud-panel__badge-group {
@@ -253,17 +341,18 @@ button {
 }
 
 .hud-copy {
-  margin: 0 0 10px;
+  margin: 0;
   color: #93a8bd;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.35;
-  max-width: 24ch;
+  max-width: 22ch;
 }
 
 .stat-row {
   display: flex;
   justify-content: space-between;
-  padding: 10px 0;
+  padding: 8px 0;
+  gap: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -273,12 +362,12 @@ button {
 
 .hud-stat-grid {
   display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 0;
 }
 
 .hud-stat-card {
-  padding: 10px 12px;
+  padding: 9px 10px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -304,7 +393,7 @@ button {
 }
 
 .hud-stat-card__value {
-  font-size: 1rem;
+  font-size: 0.96rem;
   flex-shrink: 0;
   text-align: right;
 }
@@ -317,7 +406,7 @@ button {
 .hud-stat-card__detail {
   margin: 6px 0 0;
   color: #93a8bd;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.3;
 }
 
@@ -344,7 +433,7 @@ button {
 }
 
 .hud-compact-list {
-  margin-top: 10px;
+  margin-top: 0;
 }
 
 .status-badge {
@@ -375,11 +464,11 @@ button {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   color: #dce6f2;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -405,8 +494,8 @@ button {
   width: fit-content;
   max-width: 100%;
   border-radius: 999px;
-  padding: 5px 9px;
-  font-size: 11px;
+  padding: 4px 8px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -444,8 +533,8 @@ button {
 }
 
 .hud-controls {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 0;
+  padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -461,15 +550,15 @@ button {
 .hud-controls__copy {
   margin: 0;
   color: #dce6f2;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.35;
 }
 
 .hud-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 0;
 }
 
 .sensor-panel {
@@ -482,11 +571,11 @@ button {
 .telemetry-strip {
   min-height: 0;
   height: 100%;
-  padding: 10px 14px;
+  padding: 8px 12px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   overflow: hidden;
   min-width: 0;
 }
@@ -495,7 +584,7 @@ button {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1 1 0;
   overflow: hidden;
 }
@@ -520,7 +609,7 @@ button {
 
 .telemetry-strip__value {
   color: #e8edf4;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
@@ -529,14 +618,14 @@ button {
 
 .telemetry-strip__unit {
   color: #93a8bd;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
 
 .telemetry-strip__flag {
   display: inline-flex;
   width: fit-content;
-  padding: 3px 7px;
+  padding: 2px 6px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.14);
   color: #cbd5e1;
@@ -579,5 +668,47 @@ button {
   .hud-panel__top {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-height: 860px) {
+  .app-shell--gameplay {
+    padding: 10px;
+  }
+
+  .game-layout--fixed .game-frame {
+    grid-template-rows: minmax(0, 1fr) minmax(52px, 64px);
+    gap: 10px;
+  }
+
+  .game-layout--fixed .game-frame__main,
+  .game-layout--fixed .game-frame__rail {
+    gap: 10px;
+  }
+
+  .game-layout--fixed .game-frame__rail {
+    grid-template-rows: minmax(180px, 30%) minmax(0, 1fr);
+  }
+
+  .hud-panel {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .hud-copy,
+  .hud-controls__copy {
+    font-size: 11px;
+  }
+
+  .hud-stat-card {
+    padding: 8px 9px;
+  }
+
+  .camera-panel {
+    padding: 8px;
+  }
+
+  .camera-panel__empty {
+    font-size: 12px;
   }
 }
