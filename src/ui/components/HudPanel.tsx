@@ -7,11 +7,13 @@ import { useSensorStore } from "../../store/sensorStore";
 export interface HudPanelProps {
   panicPlaceholder?: number;
   clarityPlaceholder?: number;
+  modeIsPlaceholder?: boolean;
 }
 
 export function HudPanel({
   panicPlaceholder = 28,
   clarityPlaceholder = 74,
+  modeIsPlaceholder = true,
 }: HudPanelProps) {
   const score = useGameStore((state) => state.score);
   const stability = useGameStore((state) => state.stability);
@@ -54,7 +56,7 @@ export function HudPanel({
       <div className="hud-panel__badges">
         <div className="hud-panel__badge-group">
           <span className="hud-panel__badge-label">Mode</span>
-          <ModeBadge mode={mode} />
+          <ModeBadge mode={mode} isPlaceholder={modeIsPlaceholder} />
         </div>
         <div className="hud-panel__badge-group">
           <span className="hud-panel__badge-label">Event</span>
@@ -115,7 +117,9 @@ export function HudPanel({
 
       <div className="hud-controls">
         <span className="hud-controls__title">Controls</span>
-        <p className="hud-controls__copy">Left/Right to shift lanes. Space to catch in the active lane.</p>
+        <p className="hud-controls__copy">
+          Left/Right to shift lanes. Space to catch in the active lane.
+        </p>
       </div>
 
       <div className="hud-actions">

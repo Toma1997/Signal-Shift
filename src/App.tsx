@@ -7,9 +7,11 @@ import { ResultsScreen } from "./ui/screens/ResultsScreen";
 
 export default function App() {
   const screen = useGameStore((state) => state.screen);
+  const appShellClassName =
+    screen === "playing" ? "app-shell app-shell--gameplay" : "app-shell";
 
   return (
-    <div className="app-shell">
+    <div className={appShellClassName}>
       {screen === "title" && <TitleScreen />}
       {screen === "setup" && <SetupScreen />}
       {screen === "calibration" && <CalibrationScreen />}

@@ -9,21 +9,25 @@ export function GameScreen() {
   const sensors = useSensorStore((state) => state.sensors);
 
   return (
-    <section className="screen game-layout" tabIndex={-1} aria-label="Gameplay screen">
+    <section
+      className="screen screen--gameplay game-layout"
+      tabIndex={-1}
+      aria-label="Gameplay screen"
+    >
       <GameFrame
         center={<GameCanvas />}
-        hud={<HudPanel />}
+        hud={<HudPanel modeIsPlaceholder />}
         camera={
           <CameraPanel
             title="Camera"
             isLive
             emptyLabel="Camera preview"
+            isPlaceholder
             statusChips={[
               { label: "Camera ready", tone: "good" },
               { label: "Sim EEG", tone: "info" },
               { label: "Signal OK", tone: "neutral" },
             ]}
-            footerText="Day 4 can replace this placeholder surface with a real video element."
           />
         }
         telemetry={
