@@ -50,7 +50,6 @@ export function GameCanvas() {
     }
 
     let frameId = 0;
-
     const resizeCanvas = () => {
       const rect = panel.getBoundingClientRect();
       const maxWidth = Math.max(260, Math.floor(rect.width - 16));

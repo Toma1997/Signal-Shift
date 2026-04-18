@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { SIGNAL_KIND_LABELS, SIGNAL_ROUTING_LANES } from "../../game/constants";
 import { HudStatCard } from "./HudStatCard";
 import { ModeBadge } from "./ModeBadge";
 import { useGameStore } from "../../store/gameStore";
@@ -15,17 +14,19 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
   const corruption = useGameStore((state) => state.corruption);
   const combo = useGameStore((state) => state.combo);
   const playerLane = useGameStore((state) => state.playerLane);
-  const objects = useGameStore((state) => state.objects);
+  const objectCount = useGameStore((state) => state.objects.length);
   const isRunning = useGameStore((state) => state.isRunning);
   const isGameOver = useGameStore((state) => state.isGameOver);
   const startRun = useGameStore((state) => state.startRun);
   const resetRun = useGameStore((state) => state.resetRun);
   const mode = useSensorStore((state) => state.sensors.mode);
   const heartReading = useSensorStore((state) => state.heartReading);
+  const lastLiveBpm = useSensorStore((state) => state.lastLiveBpm);
   const baselineBpm = useSensorStore((state) => state.baselineBpm);
   const heartSignalQuality = useSensorStore((state) => state.heartSignalQuality);
   const pressureLevel = useSensorStore((state) => state.pressureLevel);
   const bpmDeltaPct = useSensorStore((state) => state.bpmDeltaPct);
+  const calibration = useSensorStore((state) => state.calibration);
 
   const statusLabel = isGameOver ? "Game Over" : isRunning ? "Running" : "Idle";
   const statusClass = isGameOver
@@ -35,15 +36,12 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
       : "status-badge is-idle";
 
   const currentEventLabel = useMemo(() => {
-    if (!objects.length) {
+    if (!objectCount) {
       return isRunning ? "Lane scan clear" : "Awaiting run start";
     }
-
-    const nearest = [...objects].sort((a, b) => b.y - a.y)[0];
-    const signalLabel = SIGNAL_KIND_LABELS[nearest.kind];
-    const routeLabel = SIGNAL_ROUTING_LANES[nearest.kind];
-    return `${signalLabel} -> ${routeLabel}`;
-  }, [isRunning, objects]);
+    return "Inbound traffic active";
+  }, [isRunning, objectCount]);
+  const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
 
   return (
     <aside className="panel hud-panel">
@@ -70,7 +68,7 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
         <HudStatCard
           label="Score"
           value={score.score}
-          detail={`${score.sorted} sorted`}
+          detail={`${score.sorted} correctly sorted`}
           tone="good"
         />
         <HudStatCard
@@ -106,12 +104,20 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
           <strong>{corruption}</strong>
         </div>
         <div className="stat-row">
+          <span className="stat-label">Correctly Sorted</span>
+          <strong>{score.sorted}</strong>
+        </div>
+        <div className="stat-row">
+          <span className="stat-label">Wrongly Sorted</span>
+          <strong>{score.wronglySorted}</strong>
+        </div>
+        <div className="stat-row">
           <span className="stat-label">Combo</span>
           <strong>{combo}</strong>
         </div>
         <div className="stat-row">
           <span className="stat-label">Live BPM</span>
-          <strong>{heartReading ? heartReading.bpm.toFixed(1) : "--"}</strong>
+          <strong>{displayBpm != null ? displayBpm.toFixed(1) : "--"}</strong>
         </div>
         <div className="stat-row">
           <span className="stat-label">Baseline BPM</span>
@@ -123,7 +129,7 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
         </div>
         <div className="stat-row">
           <span className="stat-label">Object Count</span>
-          <strong>{objects.length}</strong>
+          <strong>{objectCount}</strong>
         </div>
       </div>
 

@@ -27,6 +27,7 @@ export interface FallingObject {
 export interface ScoreSummary {
   score: number;
   sorted: number;
+  wronglySorted: number;
   missed: number;
   survivedSeconds: number;
 }
@@ -52,6 +53,8 @@ export interface GameState {
   itemsMissed: number;
   spawnIntervalMs: number;
   lastSpawnAtMs: number;
+  resultBpmHistory: number[];
+  resultBaselineBpm: number | null;
   isRunning: boolean;
   isGameOver: boolean;
 }

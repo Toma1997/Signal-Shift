@@ -28,7 +28,7 @@ export interface RppgServiceController {
   stop: () => Promise<void>;
 }
 
-const POLL_INTERVAL_MS = 250;
+const POLL_INTERVAL_MS = 300;
 const ANALYSIS_VIDEO_ID = "signal-shift-rppg-analysis-video";
 
 function createAnalysisVideo(stream: MediaStream): HTMLVideoElement {
@@ -45,15 +45,31 @@ function createAnalysisVideo(stream: MediaStream): HTMLVideoElement {
   video.playsInline = true;
   video.setAttribute("aria-hidden", "true");
   video.style.position = "fixed";
-  video.style.width = "1px";
-  video.style.height = "1px";
-  video.style.opacity = "0";
+  video.style.left = "-10000px";
+  video.style.top = "0";
+  video.style.width = "640px";
+  video.style.height = "480px";
+  video.style.opacity = "0.001";
   video.style.pointerEvents = "none";
-  video.style.bottom = "0";
-  video.style.right = "0";
   video.srcObject = stream;
   document.body.appendChild(video);
   return video;
+}
+
+function buildMessage(diagnostics: RppgSessionDiagnostics): string {
+  if (diagnostics.issues.includes("insufficient_window")) {
+    return "Gathering enough samples for BPM.";
+  }
+
+  if (diagnostics.issues.includes("low_skin_ratio")) {
+    return "Move closer and keep your face centered for a stronger signal.";
+  }
+
+  if (diagnostics.issues.includes("backend_unavailable")) {
+    return "Elata rPPG backend is unavailable.";
+  }
+
+  return diagnostics.state.status;
 }
 
 export async function startRppgService(
@@ -70,28 +86,26 @@ export async function startRppgService(
 
     session = await createRppgSession({
       video,
+      sampleRate: 30,
       backend: "auto",
-      faceMesh: "off",
+      faceMesh: "auto",
       wasmJsUrl: rppgWasmJsUrl,
       wasmBinaryUrl: rppgWasmBinaryUrl,
       ensureVideoPlayback: true,
       autoStart: true,
       onDiagnostics: (diagnostics: RppgSessionDiagnostics) => {
         const metrics = session?.getMetrics();
-        const bpmReady =
-          metrics?.bpm != null &&
-          (metrics?.confidence ?? 0) >= 0.5 &&
-          (metrics?.signal_quality ?? 0) >= 0.45;
+        const ready =
+          diagnostics.backendMode !== "unavailable" &&
+          (metrics?.bpm != null || diagnostics.estimationAvailable);
 
         handlers.onDiagnostics?.({
           confidence: metrics?.confidence ?? 0,
           signalQuality: metrics?.signal_quality ?? 0,
           backendAvailable: diagnostics.backendMode !== "unavailable",
           issues: diagnostics.issues,
-          message: diagnostics.issues.includes("insufficient_window")
-            ? "Gathering enough samples for BPM."
-            : diagnostics.state.status,
-          ready: bpmReady,
+          message: buildMessage(diagnostics),
+          ready,
         });
       },
       onError: (error) => {
@@ -107,8 +121,8 @@ export async function startRppgService(
       const metrics = session.getMetrics();
       handlers.onReading({
         bpm: metrics.bpm ?? null,
-        confidence: metrics.confidence,
-        signalQuality: metrics.signal_quality,
+        confidence: metrics.confidence ?? 0,
+        signalQuality: metrics.signal_quality ?? 0,
         timestampMs: Date.now(),
       });
     }, POLL_INTERVAL_MS);
@@ -121,7 +135,7 @@ export async function startRppgService(
         }
 
         if (session) {
-          await session.stop();
+          await session.dispose();
           session = null;
         }
 
@@ -139,7 +153,7 @@ export async function startRppgService(
     }
 
     if (session) {
-      await session.stop();
+      await session.dispose();
     }
 
     if (video) {

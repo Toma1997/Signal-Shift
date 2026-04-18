@@ -35,6 +35,7 @@ export const catchZoneHeight = 90;
 export const MOCK_SCORE = {
   score: 1280,
   sorted: 24,
+  wronglySorted: 2,
   missed: 3,
   survivedSeconds: 78,
 };

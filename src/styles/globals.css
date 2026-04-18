@@ -141,6 +141,66 @@ button {
   line-height: 1.45;
 }
 
+.results-chart {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(126, 155, 194, 0.18);
+  background: rgba(7, 16, 26, 0.78);
+}
+
+.results-chart__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.results-chart__summary {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  color: #93a8bd;
+  font-size: 12px;
+}
+
+.results-chart__svg {
+  width: 100%;
+  height: 180px;
+  display: block;
+}
+
+.results-chart__axis {
+  stroke: rgba(148, 163, 184, 0.28);
+  stroke-width: 1.5;
+}
+
+.results-chart__marker {
+  stroke: #091018;
+  stroke-width: 2;
+}
+
+.results-chart__marker.is-start {
+  fill: #7dd3fc;
+}
+
+.results-chart__marker.is-end {
+  fill: #4dd0a7;
+}
+
+.results-chart__timeline {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #cbd5e1;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
 .game-layout {
   display: grid;
   grid-template-rows: minmax(0, 1fr);
@@ -366,6 +426,71 @@ button {
   margin-top: 0;
 }
 
+.hud-bpm-chart {
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hud-bpm-chart__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.hud-bpm-chart__legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hud-bpm-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #93a8bd;
+  font-size: 11px;
+}
+
+.hud-bpm-chart__legend-item::before {
+  content: "";
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.hud-bpm-chart__legend-item.is-live {
+  color: #7dd3fc;
+}
+
+.hud-bpm-chart__legend-item.is-baseline {
+  color: #fbbf24;
+}
+
+.hud-bpm-chart__svg {
+  width: 100%;
+  height: 76px;
+  display: block;
+}
+
+.hud-bpm-chart__live {
+  fill: none;
+  stroke: #7dd3fc;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hud-bpm-chart__baseline {
+  stroke: #fbbf24;
+  stroke-width: 2;
+  stroke-dasharray: 5 5;
+}
+
 .hud-stat-card {
   padding: 9px 10px;
   border-radius: 14px;
@@ -573,7 +698,7 @@ button {
   height: 100%;
   padding: 8px 12px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
   align-items: center;
   gap: 8px;
   overflow: hidden;
@@ -591,6 +716,15 @@ button {
 
 .telemetry-strip__metric.is-emphasis {
   min-width: 0;
+}
+
+.telemetry-strip__metric.is-trend {
+  margin: 2px 4px 2px 0;
+  padding: 8px 10px 7px;
+  border-radius: 12px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  background: rgba(9, 20, 31, 0.58);
+  padding-right: 10px;
 }
 
 .telemetry-strip__metric.is-placeholder .telemetry-strip__value {
@@ -614,6 +748,27 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.telemetry-strip__sparkline {
+  width: 100%;
+  height: 30px;
+  display: block;
+  margin-top: 2px;
+}
+
+.telemetry-strip__sparkline-path {
+  fill: none;
+  stroke: #7dd3fc;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.telemetry-strip__sparkline-baseline {
+  stroke: #fbbf24;
+  stroke-width: 1.75;
+  stroke-dasharray: 5 4;
 }
 
 .telemetry-strip__unit {

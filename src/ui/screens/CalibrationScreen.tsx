@@ -8,6 +8,7 @@ export function CalibrationScreen() {
   const webcam = useSensorStore((state) => state.webcam);
   const webcamStream = useSensorStore((state) => state.webcamStream);
   const heartReading = useSensorStore((state) => state.heartReading);
+  const lastLiveBpm = useSensorStore((state) => state.lastLiveBpm);
   const heartConfidence = useSensorStore((state) => state.heartConfidence);
   const heartSignalQuality = useSensorStore((state) => state.heartSignalQuality);
   const rppgStatus = useSensorStore((state) => state.rppgStatus);
@@ -44,20 +45,41 @@ export function CalibrationScreen() {
     }
   }, [rppgStatus, startHeartRateStream, webcam.isStreaming]);
 
+  useEffect(() => {
+    if (
+      webcam.isStreaming &&
+      rppgStatus === "running" &&
+      calibration.status === "idle" &&
+      calibration.baselineBpm == null
+    ) {
+      startCalibration();
+    }
+  }, [
+    calibration.baselineBpm,
+    calibration.status,
+    rppgStatus,
+    startCalibration,
+    webcam.isStreaming,
+  ]);
+
   const canStartCalibration =
     webcam.isStreaming && rppgStatus === "running" && calibration.status !== "collecting";
   const canBeginRun =
-    webcam.isStreaming && rppgStatus !== "idle" && rppgStatus !== "error";
+    webcam.isStreaming &&
+    rppgStatus === "running" &&
+    calibration.status === "complete" &&
+    calibration.baselineBpm != null;
   const recentAcceptedReadings = calibration.acceptedReadings.slice(-8);
   const progressPercent = Math.round(calibration.progress * 100);
+  const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
 
   return (
     <section className="screen center-screen">
       <div className="hero-card">
         <h2>Calibration</h2>
         <p>
-          Start the camera and BPM first. Once both are live, you can begin the run immediately.
-          Quick baseline is optional if you want more personalized pressure behavior.
+          Start the camera and BPM first. As soon as the signal is live, Signal Shift captures a
+          short baseline automatically so gameplay can begin with a personalized reference.
         </p>
 
         <div
@@ -87,7 +109,7 @@ export function CalibrationScreen() {
 
         <p>
           Camera: {webcam.isStreaming ? "live" : "offline"} | BPM:{" "}
-          {heartReading ? `${heartReading.bpm.toFixed(1)} bpm` : "waiting"} | Confidence:{" "}
+          {displayBpm != null ? `${displayBpm.toFixed(1)} bpm` : "waiting"} | Confidence:{" "}
           {(heartConfidence * 100).toFixed(0)}% | Signal: {(heartSignalQuality * 100).toFixed(0)}%
         </p>
         <p>
@@ -97,10 +119,12 @@ export function CalibrationScreen() {
             : ""}
         </p>
         {!canBeginRun ? (
-          <p>Begin Run unlocks after the camera is live and the BPM session has been started.</p>
-        ) : calibration.status === "idle" && calibration.baselineBpm == null ? (
-          <p>You are ready to play. Quick baseline is optional.</p>
-        ) : null}
+          <p>
+            Begin Run unlocks after live BPM is ready and the short baseline capture completes.
+          </p>
+        ) : (
+          <p>Baseline captured. You are ready to play.</p>
+        )}
         {calibration.status === "collecting" ? <p>Progress: {progressPercent}%</p> : null}
         {recentAcceptedReadings.length > 0 ? (
           <p>Accepted BPM: {recentAcceptedReadings.map((value) => value.toFixed(1)).join(", ")}</p>
@@ -162,9 +186,9 @@ export function CalibrationScreen() {
               onClick={() => {
                 startCalibration();
               }}
-              disabled={!canStartCalibration}
+              disabled={!canStartCalibration || calibration.baselineBpm != null}
             >
-              Quick Baseline
+              Retry Baseline
             </button>
           )}
           <button

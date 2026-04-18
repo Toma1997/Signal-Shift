@@ -11,8 +11,8 @@ export interface HeartReadingInputs {
   signalQuality?: number | null;
 }
 
-const MIN_CONFIDENCE = 0.5;
-const MIN_SIGNAL_QUALITY = 0.45;
+const MIN_CONFIDENCE = 0.2;
+const MIN_SIGNAL_QUALITY = 0.1;
 const MAX_STEP_BPM = 18;
 const SMOOTHING_FACTOR = 0.55;
 const STALE_READING_MS = 2200;

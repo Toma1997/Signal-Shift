@@ -36,6 +36,8 @@ interface SensorState {
   webcam: WebcamState;
   webcamStream: MediaStream | null;
   heartReading: HeartReading | null;
+  lastLiveBpm: number | null;
+  bpmHistory: number[];
   heartConfidence: number;
   heartSignalQuality: number;
   baselineBpm: number | null;
@@ -63,8 +65,9 @@ const initialWebcamState: WebcamState = {
 
 let activeRppgController: RppgServiceController | null = null;
 let calibrationTimer: number | null = null;
-const CALIBRATION_DURATION_MS = 14_000;
-const MIN_CALIBRATION_CONFIDENCE = 0.6;
+const CALIBRATION_DURATION_MS = 8_000;
+const MIN_CALIBRATION_CONFIDENCE = 0.45;
+const MAX_BPM_HISTORY = 48;
 
 function createInitialCalibrationState(): CalibrationState {
   return {
@@ -161,6 +164,8 @@ export const useSensorStore = create<SensorState>((set) => ({
   webcam: initialWebcamState,
   webcamStream: null,
   heartReading: null,
+  lastLiveBpm: null,
+  bpmHistory: [],
   heartConfidence: 0,
   heartSignalQuality: 0,
   baselineBpm: null,
@@ -314,10 +319,18 @@ export const useSensorStore = create<SensorState>((set) => ({
 
             return {
               heartReading: nextReading,
+              lastLiveBpm: nextReading?.bpm ?? state.lastLiveBpm,
+              bpmHistory:
+                nextReading != null
+                  ? [...state.bpmHistory, nextReading.bpm].slice(-MAX_BPM_HISTORY)
+                  : state.bpmHistory,
               heartConfidence: reading.confidence,
               heartSignalQuality: reading.signalQuality ?? 0,
               ...derivedPressure,
-              rppgStatus: nextReading ? "running" : state.rppgStatus,
+              rppgStatus:
+                nextReading || state.rppgStatus === "running"
+                  ? "running"
+                  : state.rppgStatus,
               rppgError: undefined,
               calibration:
                 state.calibration.status === "collecting"
@@ -345,16 +358,19 @@ export const useSensorStore = create<SensorState>((set) => ({
               diagnostics.signalQuality,
             ),
             rppgStatus:
-              diagnostics.backendAvailable && state.webcam.isStreaming
-                ? diagnostics.ready
-                  ? "running"
-                  : "initializing"
-                : "error",
-            rppgError: diagnostics.backendAvailable
-              ? diagnostics.ready
-                ? undefined
-                : diagnostics.message
-              : "Elata rPPG backend is unavailable.",
+              !state.webcam.isStreaming
+                ? "idle"
+                : !diagnostics.backendAvailable
+                  ? "error"
+                  : diagnostics.ready || state.rppgStatus === "running"
+                    ? "running"
+                    : "initializing",
+            rppgError:
+              !diagnostics.backendAvailable
+                ? "Elata rPPG backend is unavailable."
+                : diagnostics.ready || state.rppgStatus === "running"
+                  ? undefined
+                  : diagnostics.message,
           }));
         },
         onError: (message) => {
@@ -388,7 +404,7 @@ export const useSensorStore = create<SensorState>((set) => ({
     set({
       heartConfidence: 0,
       heartSignalQuality: 0,
-      baselineBpm: null,
+      bpmHistory: [],
       bpmDeltaPct: null,
       pressureLevel: 18,
       signalReliable: false,
@@ -400,7 +416,11 @@ export const useSensorStore = create<SensorState>((set) => ({
   startCalibration: () => {
     const state = useSensorStore.getState();
 
-    if (!state.webcam.isStreaming || state.rppgStatus !== "running" || !state.heartReading) {
+    if (
+      !state.webcam.isStreaming ||
+      state.rppgStatus !== "running" ||
+      (state.heartReading == null && state.lastLiveBpm == null)
+    ) {
       set({
         calibration: {
           ...createInitialCalibrationState(),

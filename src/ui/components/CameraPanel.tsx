@@ -27,8 +27,10 @@ export function CameraPanel({
   const webcam = useSensorStore((state) => state.webcam);
   const webcamStream = useSensorStore((state) => state.webcamStream);
   const heartReading = useSensorStore((state) => state.heartReading);
+  const lastLiveBpm = useSensorStore((state) => state.lastLiveBpm);
   const heartConfidence = useSensorStore((state) => state.heartConfidence);
   const heartSignalQuality = useSensorStore((state) => state.heartSignalQuality);
+  const calibration = useSensorStore((state) => state.calibration);
   const rppgStatus = useSensorStore((state) => state.rppgStatus);
   const rppgError = useSensorStore((state) => state.rppgError);
   const requestCameraPermission = useSensorStore((state) => state.requestCameraPermission);
@@ -104,6 +106,7 @@ export function CameraPanel({
   const showLivePreview = webcam.isStreaming && Boolean(webcamStream);
   const effectiveLive = isLive || showLivePreview;
   const footerLabel = rppgError ?? webcam.streamError ?? footerText;
+  const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
 
   return (
     <section
@@ -190,7 +193,7 @@ export function CameraPanel({
       ) : null}
 
       <p className="camera-panel__footer">
-        BPM {heartReading ? heartReading.bpm.toFixed(1) : "--"} | Confidence{" "}
+        BPM {displayBpm != null ? displayBpm.toFixed(1) : "--"} | Confidence{" "}
         {(heartConfidence * 100).toFixed(0)}% | Signal {(heartSignalQuality * 100).toFixed(0)}%
       </p>
       {footerLabel ? <p className="camera-panel__footer">{footerLabel}</p> : null}

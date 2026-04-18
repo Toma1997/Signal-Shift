@@ -18,6 +18,7 @@ function createInitialScore() {
   return {
     score: 0,
     sorted: 0,
+    wronglySorted: 0,
     missed: 0,
     survivedSeconds: 0,
   };
@@ -38,6 +39,8 @@ function createInitialState(): GameState {
     itemsMissed: 0,
     spawnIntervalMs: initialSpawnIntervalMs,
     lastSpawnAtMs: 0,
+    resultBpmHistory: [],
+    resultBaselineBpm: null,
     isRunning: false,
     isGameOver: false,
   };
@@ -55,6 +58,15 @@ function getSurvivedSeconds(state: GameState, nowMs: number): number {
   return Math.max(0, Math.floor((nowMs - state.startedAtMs) / 1000));
 }
 
+function buildResultsTelemetrySnapshot() {
+  const sensorState = useSensorStore.getState();
+
+  return {
+    resultBpmHistory: [...sensorState.bpmHistory],
+    resultBaselineBpm: sensorState.baselineBpm,
+  };
+}
+
 function applyScoreDelta(
   state: GameState,
   delta: ReturnType<typeof scoreCatch>,
@@ -68,6 +80,7 @@ function applyScoreDelta(
     score: {
       score: Math.max(0, state.score.score + delta.scoreDelta),
       sorted: state.score.sorted + delta.sortedDelta,
+      wronglySorted: state.score.wronglySorted + delta.wronglySortedDelta,
       missed: state.score.missed + delta.missedDelta,
       survivedSeconds: nextSurvivedSeconds,
     },
@@ -91,6 +104,7 @@ function applyMissDelta(
     score: {
       score: Math.max(0, state.score.score + delta.scoreDelta),
       sorted: state.score.sorted + delta.sortedDelta,
+      wronglySorted: state.score.wronglySorted + delta.wronglySortedDelta,
       missed: state.score.missed + delta.missedDelta,
       survivedSeconds: nextSurvivedSeconds,
     },
@@ -172,7 +186,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       const dtSeconds =
-        state.nowMs === 0 ? 0 : Math.max(0, (nowMs - state.nowMs) / 1000);
+        state.nowMs === 0 ? 0 : Math.min(0.04, Math.max(0, (nowMs - state.nowMs) / 1000));
       const sensorState = useSensorStore.getState();
       const elapsedMs =
         state.startedAtMs == null ? 0 : Math.max(0, nowMs - state.startedAtMs);
@@ -233,6 +247,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (shouldGameOver(nextState.stability, nextState.corruption)) {
         return {
           ...nextState,
+          ...buildResultsTelemetrySnapshot(),
           isRunning: false,
           isGameOver: true,
           screen: "results",
@@ -286,6 +301,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (shouldGameOver(nextState.stability, nextState.corruption)) {
         return {
           ...nextState,
+          ...buildResultsTelemetrySnapshot(),
           isRunning: false,
           isGameOver: true,
           screen: "results",
@@ -326,6 +342,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return {
           ...nextState,
           objects: remaining,
+          ...buildResultsTelemetrySnapshot(),
           isRunning: false,
           isGameOver: true,
           screen: "results",
@@ -339,6 +356,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }),
   setGameOver: () =>
     set((state) => ({
+      ...buildResultsTelemetrySnapshot(),
       isRunning: false,
       isGameOver: true,
       screen: "results",
