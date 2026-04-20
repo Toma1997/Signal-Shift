@@ -45,7 +45,7 @@ export function scoreCatch(kind: SignalKind, lane: Lane): ScoreDelta {
     case "charge_signal":
       return {
         scoreDelta: routedCorrectly ? 10 : -5,
-        stabilityDelta: 0,
+        stabilityDelta: routedCorrectly ? 3 : -5,
         corruptionDelta: 0,
         comboDelta: routedCorrectly ? 1 : 0,
         resetCombo: !routedCorrectly,
@@ -56,8 +56,8 @@ export function scoreCatch(kind: SignalKind, lane: Lane): ScoreDelta {
     case "interference":
       return {
         scoreDelta: routedCorrectly ? 6 : -4,
-        stabilityDelta: 0,
-        corruptionDelta: routedCorrectly ? 0 : 2,
+        stabilityDelta: routedCorrectly ? 2 : -5,
+        corruptionDelta: routedCorrectly ? -1 : 2,
         comboDelta: 0,
         resetCombo: false,
         sortedDelta: routedCorrectly ? 1 : 0,
@@ -66,9 +66,9 @@ export function scoreCatch(kind: SignalKind, lane: Lane): ScoreDelta {
       };
     case "anomaly":
       return {
-        scoreDelta: routedCorrectly ? 2 : -8,
-        stabilityDelta: routedCorrectly ? -2 : -6,
-        corruptionDelta: routedCorrectly ? 2 : 6,
+        scoreDelta: routedCorrectly ? 4 : -8,
+        stabilityDelta: routedCorrectly ? 2 : -7,
+        corruptionDelta: routedCorrectly ? -2 : 6,
         comboDelta: 0,
         resetCombo: false,
         sortedDelta: routedCorrectly ? 1 : 0,
@@ -96,7 +96,7 @@ export function scoreMiss(kind: SignalKind, lane: Lane): ScoreDelta {
     case "charge_signal":
       return {
         scoreDelta: 0,
-        stabilityDelta: 0,
+        stabilityDelta: routedCorrectly ? -4 : 0,
         corruptionDelta: 0,
         comboDelta: 0,
         resetCombo: routedCorrectly,
@@ -106,25 +106,25 @@ export function scoreMiss(kind: SignalKind, lane: Lane): ScoreDelta {
       };
     case "interference":
       return {
-        scoreDelta: routedCorrectly ? 6 : 0,
-        stabilityDelta: 0,
+        scoreDelta: 0,
+        stabilityDelta: routedCorrectly ? -4 : 0,
         corruptionDelta: 0,
         comboDelta: 0,
         resetCombo: false,
-        sortedDelta: routedCorrectly ? 1 : 0,
+        sortedDelta: 0,
         wronglySortedDelta: 0,
-        missedDelta: 0,
+        missedDelta: routedCorrectly ? 1 : 0,
       };
     case "anomaly":
       return {
-        scoreDelta: routedCorrectly ? 2 : 0,
-        stabilityDelta: routedCorrectly ? -2 : -8,
-        corruptionDelta: routedCorrectly ? 3 : 10,
+        scoreDelta: 0,
+        stabilityDelta: routedCorrectly ? -5 : 0,
+        corruptionDelta: routedCorrectly ? 4 : 0,
         comboDelta: 0,
         resetCombo: false,
-        sortedDelta: routedCorrectly ? 1 : 0,
+        sortedDelta: 0,
         wronglySortedDelta: 0,
-        missedDelta: routedCorrectly ? 0 : 1,
+        missedDelta: routedCorrectly ? 1 : 0,
       };
   }
 }

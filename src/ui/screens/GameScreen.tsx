@@ -46,7 +46,7 @@ export function GameScreen() {
           <TelemetryStrip
             metrics={[
               { id: "bpm", label: "BPM", value: sensors.bpm, isPlaceholder: true },
-              { id: "focus", label: "Focus", value: sensors.focus, unit: "%", isPlaceholder: true },
+              { id: "spacer", label: "", value: "", isPlaceholder: false },
               { id: "quality", label: "Signal Quality", value: sensors.signalQuality, isPlaceholder: true },
               {
                 id: "activity",

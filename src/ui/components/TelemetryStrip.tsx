@@ -10,6 +10,8 @@ function buildSparklinePath(values: number[], width: number, height: number): st
     return "";
   }
 
+  const verticalPadding = 4;
+  const innerHeight = Math.max(1, height - verticalPadding * 2);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = Math.max(1, max - min);
@@ -17,10 +19,18 @@ function buildSparklinePath(values: number[], width: number, height: number): st
   return values
     .map((value, index) => {
       const x = values.length === 1 ? width / 2 : (index / (values.length - 1)) * width;
-      const y = height - ((value - min) / range) * height;
+      const y = verticalPadding + (innerHeight - ((value - min) / range) * innerHeight);
       return `${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
     })
     .join(" ");
+}
+
+function buildGraphTicks(min: number, max: number): number[] {
+  if (Math.abs(max - min) < 0.5) {
+    return [max + 2, max + 1, max, max - 1];
+  }
+
+  return [max, min + (max - min) * (2 / 3), min + (max - min) * (1 / 3), min];
 }
 
 function sampleSeries(values: number[], maxPoints: number): number[] {
@@ -43,12 +53,14 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
   const lastLiveBpm = useSensorStore((state) => state.lastLiveBpm);
   const bpmHistory = useSensorStore((state) => state.bpmHistory);
   const heartSignalQuality = useSensorStore((state) => state.heartSignalQuality);
+  const pressureLevel = useSensorStore((state) => state.pressureLevel);
+  const bpmDeltaPct = useSensorStore((state) => state.bpmDeltaPct);
   const calibration = useSensorStore((state) => state.calibration);
   const webcam = useSensorStore((state) => state.webcam);
   const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
   const sampledHistory = sampleSeries(bpmHistory, 64);
-  const width = 220;
-  const height = 32;
+  const width = 180;
+  const height = 48;
   const sparklineSeries = sampledHistory.length
     ? sampledHistory
     : displayBpm != null
@@ -62,12 +74,32 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
   const baselineY =
     paddedSeries.length && calibration.baselineBpm != null
       ? (() => {
+          const verticalPadding = 4;
+          const innerHeight = Math.max(1, height - verticalPadding * 2);
           const min = Math.min(...paddedSeries);
           const max = Math.max(...paddedSeries);
           const range = Math.max(1, max - min);
-          return height - ((calibration.baselineBpm - min) / range) * height;
+          return verticalPadding + (innerHeight - ((calibration.baselineBpm - min) / range) * innerHeight);
         })()
       : null;
+  const graphMin = paddedSeries.length ? Math.min(...paddedSeries) : null;
+  const graphMax = paddedSeries.length ? Math.max(...paddedSeries) : null;
+  const graphTicks =
+    graphMin != null && graphMax != null ? buildGraphTicks(graphMin, graphMax) : [];
+  const tickPositions =
+    graphTicks.length && graphMin != null && graphMax != null
+      ? (() => {
+          const verticalPadding = 4;
+          const innerHeight = Math.max(1, height - verticalPadding * 2);
+          const range = Math.max(1, graphMax - graphMin);
+
+          return graphTicks.map((tick) => ({
+            value: tick,
+            y:
+              verticalPadding + (innerHeight - ((tick - graphMin) / range) * innerHeight),
+          }));
+        })()
+      : [];
 
   const resolvedMetrics = metrics.map((metric) => {
     if (metric.id === "bpm") {
@@ -83,17 +115,26 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
       };
     }
 
-    if (metric.id === "focus") {
+    if (metric.id === "pressure") {
       return {
         ...metric,
-        label: "Baseline BPM",
+        label: "Pressure",
         value:
-          calibration.baselineBpm != null
-            ? calibration.baselineBpm.toFixed(1)
-            : calibration.status === "collecting"
-              ? "Calibrating"
-              : "No baseline",
+          calibration.baselineBpm != null && bpmDeltaPct != null
+            ? `${Math.round(pressureLevel)}`
+            : "Safe",
+        unit:
+          calibration.baselineBpm != null && bpmDeltaPct != null ? "%" : undefined,
         isPlaceholder: calibration.baselineBpm == null,
+      };
+    }
+
+    if (metric.id === "spacer") {
+      return {
+        ...metric,
+        label: "",
+        value: "",
+        isPlaceholder: false,
       };
     }
 
@@ -135,30 +176,66 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
           key={metric.id}
           className={`telemetry-strip__metric${metric.emphasis ? " is-emphasis" : ""}${metric.isPlaceholder ? " is-placeholder" : ""}${metric.id === "bpm" ? " is-trend" : ""}`}
         >
-          <span className="telemetry-strip__label">{metric.label}</span>
-          <span className="telemetry-strip__value">
-            {metric.value}
-            {metric.unit ? <span className="telemetry-strip__unit"> {metric.unit}</span> : null}
-          </span>
-          {metric.id === "bpm" && bpmSparkline ? (
-            <svg
-              viewBox={`0 0 ${width} ${height}`}
-              className="telemetry-strip__sparkline"
-              role="img"
-              aria-label="Live BPM trend during gameplay"
-            >
-              {baselineY != null ? (
-                <line
-                  x1="0"
-                  x2={width}
-                  y1={baselineY}
-                  y2={baselineY}
-                  className="telemetry-strip__sparkline-baseline"
-                />
+          {metric.id === "bpm" ? (
+            <div className="telemetry-strip__trend-layout">
+              <div className="telemetry-strip__trend-copy">
+                <span className="telemetry-strip__label">{metric.label}</span>
+                <span className="telemetry-strip__value telemetry-strip__value--trend">
+                  {metric.value}
+                  {metric.unit ? <span className="telemetry-strip__unit"> {metric.unit}</span> : null}
+                </span>
+                {calibration.baselineBpm != null ? (
+                  <span className="telemetry-strip__subvalue">
+                    Baseline {calibration.baselineBpm.toFixed(1)}
+                  </span>
+                ) : null}
+              </div>
+              {bpmSparkline ? (
+                <div className="telemetry-strip__sparkline-shell">
+                  <div className="telemetry-strip__sparkline-scale" aria-hidden="true">
+                    {tickPositions.map((tick) => (
+                      <span key={tick.value}>{Math.round(tick.value)}</span>
+                    ))}
+                  </div>
+                  <svg
+                    viewBox={`0 0 ${width} ${height}`}
+                    className="telemetry-strip__sparkline"
+                    role="img"
+                    aria-label="Live BPM trend during gameplay"
+                  >
+                    {tickPositions.map((tick) => (
+                      <line
+                        key={tick.value}
+                        x1="0"
+                        x2={width}
+                        y1={tick.y}
+                        y2={tick.y}
+                        className="telemetry-strip__sparkline-gridline"
+                      />
+                    ))}
+                    {baselineY != null ? (
+                      <line
+                        x1="0"
+                        x2={width}
+                        y1={baselineY}
+                        y2={baselineY}
+                        className="telemetry-strip__sparkline-baseline"
+                      />
+                    ) : null}
+                    <path d={bpmSparkline} className="telemetry-strip__sparkline-path" />
+                  </svg>
+                </div>
               ) : null}
-              <path d={bpmSparkline} className="telemetry-strip__sparkline-path" />
-            </svg>
-          ) : null}
+            </div>
+          ) : (
+            <>
+              <span className="telemetry-strip__label">{metric.label}</span>
+              <span className="telemetry-strip__value">
+                {metric.value}
+                {metric.unit ? <span className="telemetry-strip__unit"> {metric.unit}</span> : null}
+              </span>
+            </>
+          )}
           {metric.isPlaceholder ? <span className="telemetry-strip__flag">Sim</span> : null}
         </div>
       ))}

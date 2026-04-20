@@ -4,7 +4,7 @@ export interface PressureSnapshot {
   signalReliable: boolean;
 }
 
-const MIN_SIGNAL_QUALITY = 0.45;
+const MIN_SIGNAL_QUALITY = 0.2;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -33,8 +33,8 @@ export function derivePressureSnapshot(
   }
 
   const bpmDeltaPct = ((bpm - baselineBpm) / baselineBpm) * 100;
-  const positiveDelta = Math.max(0, bpmDeltaPct);
-  const scaledPressure = positiveDelta * 2.3;
+  const qualityWeight = clamp((signalQuality - MIN_SIGNAL_QUALITY) / 0.45, 0.4, 1);
+  const scaledPressure = bpmDeltaPct * 2.4 * qualityWeight;
 
   return {
     bpmDeltaPct,

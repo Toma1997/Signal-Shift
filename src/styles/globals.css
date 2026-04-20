@@ -178,6 +178,18 @@ button {
   stroke-width: 1.5;
 }
 
+.results-chart__gridline {
+  stroke: rgba(148, 163, 184, 0.16);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+}
+
+.results-chart__tick {
+  fill: #93a8bd;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .results-chart__marker {
   stroke: #091018;
   stroke-width: 2;
@@ -225,7 +237,7 @@ button {
 }
 
 .game-layout--fixed .game-frame {
-  grid-template-rows: minmax(0, 1fr) minmax(56px, 72px);
+  grid-template-rows: minmax(0, 1fr) minmax(108px, 132px);
   gap: 12px;
 }
 
@@ -696,10 +708,10 @@ button {
 .telemetry-strip {
   min-height: 0;
   height: 100%;
-  padding: 8px 12px;
+  padding: 10px 10px;
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
-  align-items: center;
+  grid-template-columns: minmax(0, 1.95fr) repeat(3, minmax(0, 1fr));
+  align-items: stretch;
   gap: 8px;
   overflow: hidden;
   min-width: 0;
@@ -709,7 +721,8 @@ button {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  justify-content: center;
+  gap: 4px;
   flex: 1 1 0;
   overflow: hidden;
 }
@@ -719,12 +732,11 @@ button {
 }
 
 .telemetry-strip__metric.is-trend {
-  margin: 2px 4px 2px 0;
-  padding: 8px 10px 7px;
+  margin: 0;
+  padding: 9px 10px;
   border-radius: 12px;
-  border: 1px solid rgba(125, 211, 252, 0.18);
-  background: rgba(9, 20, 31, 0.58);
-  padding-right: 10px;
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  background: rgba(9, 20, 31, 0.68);
 }
 
 .telemetry-strip__metric.is-placeholder .telemetry-strip__value {
@@ -741,6 +753,21 @@ button {
   text-overflow: ellipsis;
 }
 
+.telemetry-strip__trend-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.telemetry-strip__trend-layout {
+  display: grid;
+  grid-template-columns: minmax(88px, 98px) minmax(0, 1fr);
+  gap: 6px;
+  align-items: stretch;
+  min-height: 0;
+}
+
 .telemetry-strip__value {
   color: #e8edf4;
   font-size: 12px;
@@ -750,11 +777,59 @@ button {
   text-overflow: ellipsis;
 }
 
+.telemetry-strip__value--trend {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.telemetry-strip__subvalue {
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .telemetry-strip__sparkline {
   width: 100%;
-  height: 30px;
+  height: 42px;
   display: block;
-  margin-top: 2px;
+}
+
+.telemetry-strip__sparkline-shell {
+  align-self: stretch;
+  min-height: 0;
+  min-width: 0;
+  padding: 5px 6px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px;
+  align-items: stretch;
+  border-radius: 8px;
+  border: 1px solid rgba(125, 211, 252, 0.32);
+  background: rgba(5, 12, 20, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.telemetry-strip__sparkline-scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #93a8bd;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 0;
+  text-align: right;
+  min-width: 22px;
+}
+
+.telemetry-strip__sparkline-gridline {
+  stroke: rgba(148, 163, 184, 0.16);
+  stroke-width: 1;
+  stroke-dasharray: 4 5;
 }
 
 .telemetry-strip__sparkline-path {
@@ -767,7 +842,7 @@ button {
 
 .telemetry-strip__sparkline-baseline {
   stroke: #fbbf24;
-  stroke-width: 1.75;
+  stroke-width: 1.4;
   stroke-dasharray: 5 4;
 }
 
@@ -832,7 +907,7 @@ button {
   }
 
   .game-layout--fixed .game-frame {
-    grid-template-rows: minmax(0, 1fr) minmax(52px, 64px);
+    grid-template-rows: minmax(0, 1fr) minmax(94px, 114px);
     gap: 10px;
   }
 
