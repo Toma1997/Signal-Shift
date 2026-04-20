@@ -4,6 +4,10 @@ export interface PressureSnapshot {
   signalReliable: boolean;
 }
 
+export interface EegDerivedSnapshot {
+  clarityGainPerSecond: number;
+}
+
 const MIN_SIGNAL_QUALITY = 0.2;
 
 function clamp(value: number, min: number, max: number): number {
@@ -40,5 +44,26 @@ export function derivePressureSnapshot(
     bpmDeltaPct,
     pressure: clamp(18 + scaledPressure, 0, 100),
     signalReliable,
+  };
+}
+
+export function deriveEegDerivedSnapshot(
+  focusScore: number | null | undefined,
+  eegSignalQuality: number | null | undefined,
+  fallbackClarityGainPerSecond: number | null | undefined,
+): EegDerivedSnapshot {
+  if (
+    focusScore == null ||
+    eegSignalQuality == null ||
+    eegSignalQuality < 15 ||
+    !Number.isFinite(focusScore)
+  ) {
+    return {
+      clarityGainPerSecond: fallbackClarityGainPerSecond ?? 0,
+    };
+  }
+
+  return {
+    clarityGainPerSecond: fallbackClarityGainPerSecond ?? 0,
   };
 }

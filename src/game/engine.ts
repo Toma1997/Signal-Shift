@@ -267,6 +267,8 @@ export interface GameCanvasSnapshot {
   objects: FallingObject[];
   score: number;
   stability: number;
+  clarityMeter: number;
+  clarityPulseActive: boolean;
 }
 
 export function drawGameFrame(
@@ -287,6 +289,14 @@ export function drawGameFrame(
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, width, height);
 
+  if (snapshot.clarityPulseActive) {
+    ctx.fillStyle = "rgba(96, 165, 250, 0.09)";
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = "rgba(125, 211, 252, 0.38)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(1.5, 1.5, width - 3, height - 3);
+  }
+
   drawLaneGuides(ctx, width, height);
   drawCatchZone(ctx, width, height);
 
@@ -302,5 +312,10 @@ export function drawGameFrame(
     ctx.textAlign = "left";
     ctx.fillText(`Score ${snapshot.score}`, 16, 28);
     ctx.fillText(`Stability ${snapshot.stability}`, 16, 50);
+    ctx.fillText(`Clarity ${Math.round(snapshot.clarityMeter)}%`, 16, 72);
+    if (snapshot.clarityPulseActive) {
+      ctx.fillStyle = "#7dd3fc";
+      ctx.fillText("Clarity Pulse active", 16, 94);
+    }
   }
 }

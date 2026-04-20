@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { initialSpawnIntervalMs } from "../game/constants";
+import {
+  CLARITY_METER_MAX,
+  CLARITY_PULSE_COST,
+  CLARITY_PULSE_DURATION_MS,
+  CLARITY_PULSE_SPEED_MULTIPLIER,
+  initialSpawnIntervalMs,
+} from "../game/constants";
 import {
   applyPressureToSpawnObject,
   getSpawnIntervalMs,
@@ -39,6 +45,8 @@ function createInitialState(): GameState {
     itemsMissed: 0,
     spawnIntervalMs: initialSpawnIntervalMs,
     lastSpawnAtMs: 0,
+    clarityMeter: 0,
+    clarityPulseEndsAtMs: null,
     resultBpmHistory: [],
     resultBaselineBpm: null,
     isRunning: false,
@@ -121,6 +129,7 @@ interface GameStore extends GameState {
   setPlayerLane: (lane: Lane) => void;
   moveLeft: () => void;
   moveRight: () => void;
+  activateClarityPulse: () => void;
   tick: (nowMs: number) => void;
   spawnObject: () => void;
   resolveCatchAtPlayerLane: () => void;
@@ -173,6 +182,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => ({
       playerLane: (state.playerLane < 2 ? state.playerLane + 1 : 2) as Lane,
     })),
+  activateClarityPulse: () =>
+    set((state) => {
+      if (
+        !state.isRunning ||
+        state.isGameOver ||
+        state.clarityPulseEndsAtMs != null ||
+        state.clarityMeter < CLARITY_PULSE_COST
+      ) {
+        return state;
+      }
+
+      return {
+        clarityMeter: Math.max(0, state.clarityMeter - CLARITY_PULSE_COST),
+        clarityPulseEndsAtMs: state.nowMs + CLARITY_PULSE_DURATION_MS,
+      };
+    }),
   tick: (nowMs) =>
     set((state) => {
       if (!state.isRunning || state.isGameOver) {
@@ -190,19 +215,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const sensorState = useSensorStore.getState();
       const elapsedMs =
         state.startedAtMs == null ? 0 : Math.max(0, nowMs - state.startedAtMs);
+      const clarityGainPerSecond = sensorState.clarityGainPerSecond ?? 0;
+      const clarityPulseActive =
+        state.clarityPulseEndsAtMs != null && nowMs < state.clarityPulseEndsAtMs;
+      const clarityPulseEndsAtMs = clarityPulseActive ? state.clarityPulseEndsAtMs : null;
       const nextSpawnIntervalMs = getSpawnIntervalMs({
         elapsedMs,
         pressure: sensorState.pressureLevel,
         signalReliable: sensorState.signalReliable,
       });
       const advancedObjects =
-        dtSeconds > 0 ? advanceObjects(state.objects, dtSeconds) : state.objects;
+        dtSeconds > 0
+          ? advanceObjects(
+              state.objects,
+              dtSeconds * (clarityPulseActive ? CLARITY_PULSE_SPEED_MULTIPLIER : 1),
+            )
+          : state.objects;
       const nextSurvivedSeconds = getSurvivedSeconds(state, nowMs);
       let nextState: GameState = {
         ...state,
         nowMs,
         objects: advancedObjects,
         spawnIntervalMs: nextSpawnIntervalMs,
+        clarityMeter: clamp(
+          state.clarityMeter + clarityGainPerSecond * dtSeconds,
+          0,
+          CLARITY_METER_MAX,
+        ),
+        clarityPulseEndsAtMs,
         score: {
           ...state.score,
           survivedSeconds: nextSurvivedSeconds,

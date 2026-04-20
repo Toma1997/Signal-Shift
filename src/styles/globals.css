@@ -65,6 +65,10 @@ button {
   place-items: center;
 }
 
+.center-screen--fit {
+  min-height: calc(min(100vh, 100dvh) - 48px);
+}
+
 .hero-card,
 .panel {
   border: 1px solid rgba(126, 155, 194, 0.2);
@@ -78,6 +82,16 @@ button {
   padding: 32px;
 }
 
+.hero-card--calibration {
+  width: min(820px, 100%);
+  max-height: calc(min(100vh, 100dvh) - 40px);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   text-transform: uppercase;
@@ -89,6 +103,102 @@ button {
 .hero-card h1,
 .hero-card h2 {
   margin: 0 0 12px;
+}
+
+.calibration-copy {
+  margin: 0;
+  color: #dce6f2;
+  line-height: 1.35;
+  font-size: 14px;
+}
+
+.calibration-copy--error {
+  color: #fda4af;
+}
+
+.calibration-preview {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(126, 155, 194, 0.2);
+  background: rgba(7, 16, 26, 0.92);
+  width: min(100%, 520px);
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  flex: 0 0 auto;
+  max-height: 40vh;
+  align-self: center;
+}
+
+.calibration-preview__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.calibration-preview__empty {
+  color: #93a8bd;
+  font-size: 14px;
+}
+
+.calibration-stats {
+  display: grid;
+  gap: 6px;
+}
+
+.calibration-stats p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.calibration-actions {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.calibration-button-row {
+  margin-top: 0;
+  gap: 8px;
+}
+
+.hero-card--calibration .primary-btn,
+.hero-card--calibration .secondary-btn {
+  padding: 10px 14px;
+}
+
+.setup-status-card {
+  margin-top: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.setup-status-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.setup-status-card__title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.setup-status-card__copy,
+.setup-status-card__error {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.setup-status-card__error {
+  color: #fda4af;
 }
 
 .primary-btn,
@@ -778,6 +888,11 @@ button {
   text-overflow: ellipsis;
 }
 
+.telemetry-strip__value--wrap {
+  white-space: normal;
+  line-height: 1.25;
+}
+
 .telemetry-strip__value--trend {
   font-size: 15px;
   line-height: 1;
@@ -791,6 +906,24 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.telemetry-strip__subvalue--neutral {
+  color: #93a8bd;
+}
+
+.telemetry-strip__mini-meter {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.telemetry-strip__mini-meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4dd0a7, #7dd3fc);
 }
 
 .telemetry-strip__sparkline {

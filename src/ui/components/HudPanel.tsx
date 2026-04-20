@@ -3,6 +3,10 @@ import { HudStatCard } from "./HudStatCard";
 import { ModeBadge } from "./ModeBadge";
 import { useGameStore } from "../../store/gameStore";
 import { useSensorStore } from "../../store/sensorStore";
+import {
+  CLARITY_METER_MAX,
+  CLARITY_PULSE_COST,
+} from "../../game/constants";
 
 export interface HudPanelProps {
   modeIsPlaceholder?: boolean;
@@ -17,6 +21,9 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
   const objectCount = useGameStore((state) => state.objects.length);
   const isRunning = useGameStore((state) => state.isRunning);
   const isGameOver = useGameStore((state) => state.isGameOver);
+  const clarityMeter = useGameStore((state) => state.clarityMeter);
+  const clarityPulseEndsAtMs = useGameStore((state) => state.clarityPulseEndsAtMs);
+  const activateClarityPulse = useGameStore((state) => state.activateClarityPulse);
   const startRun = useGameStore((state) => state.startRun);
   const resetRun = useGameStore((state) => state.resetRun);
   const mode = useSensorStore((state) => state.sensors.mode);
@@ -27,6 +34,7 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
   const pressureLevel = useSensorStore((state) => state.pressureLevel);
   const bpmDeltaPct = useSensorStore((state) => state.bpmDeltaPct);
   const calibration = useSensorStore((state) => state.calibration);
+  const clarityGainPerSecond = useSensorStore((state) => state.clarityGainPerSecond);
 
   const statusLabel = isGameOver ? "Game Over" : isRunning ? "Running" : "Idle";
   const statusClass = isGameOver
@@ -42,6 +50,8 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
     return "Inbound traffic active";
   }, [isRunning, objectCount]);
   const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
+  const clarityPulseActive = clarityPulseEndsAtMs != null;
+  const clarityReady = clarityMeter >= CLARITY_PULSE_COST;
 
   return (
     <aside className="panel hud-panel">
@@ -77,6 +87,19 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
           detail="Reactor integrity"
           tone={stability > 55 ? "good" : stability > 25 ? "warn" : "danger"}
           meterValue={stability}
+        />
+        <HudStatCard
+          label="Clarity"
+          value={`${Math.round(clarityMeter)}%`}
+          detail={
+            clarityPulseActive
+              ? "Clarity Pulse slowing incoming traffic"
+              : clarityGainPerSecond != null
+                ? `Charging at ${clarityGainPerSecond.toFixed(1)}/s`
+                : "Waiting for EEG-derived clarity gain"
+          }
+          tone={clarityReady ? "good" : "neutral"}
+          meterValue={(clarityMeter / CLARITY_METER_MAX) * 100}
         />
         <HudStatCard
           label="Pressure"
@@ -138,6 +161,9 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
         <p className="hud-controls__copy">
           Left/Right to shift lanes. Space to catch in the active lane.
         </p>
+        <p className="hud-controls__copy">
+          Press E for Clarity Pulse when the meter is full.
+        </p>
         <span className="hud-controls__title">Routing Guide</span>
         <p className="hud-controls__copy">Stabilize: Stable Signal</p>
         <p className="hud-controls__copy">Convert: Charge Signal</p>
@@ -145,6 +171,15 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
       </div>
 
       <div className="hud-actions">
+        {isRunning && !isGameOver ? (
+          <button
+            className="secondary-btn"
+            onClick={activateClarityPulse}
+            disabled={!clarityReady || clarityPulseActive}
+          >
+            {clarityPulseActive ? "Clarity Pulse Active" : "Trigger Clarity Pulse"}
+          </button>
+        ) : null}
         {!isRunning && !isGameOver ? (
           <button className="primary-btn" onClick={() => startRun()}>
             Start Run

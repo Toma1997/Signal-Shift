@@ -31,6 +31,10 @@ export const minSpawnIntervalMs = 420;
 export const baseFallSpeed = 180;
 export const speedVariance = 40;
 export const catchZoneHeight = 90;
+export const CLARITY_METER_MAX = 100;
+export const CLARITY_PULSE_COST = 100;
+export const CLARITY_PULSE_DURATION_MS = 2200;
+export const CLARITY_PULSE_SPEED_MULTIPLIER = 0.72;
 
 export const MOCK_SCORE = {
   score: 1280,

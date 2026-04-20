@@ -6,7 +6,6 @@ import { GameFrame } from "../layout/layout";
 import { useSensorStore } from "../../store/sensorStore";
 
 export function GameScreen() {
-  const sensors = useSensorStore((state) => state.sensors);
   const webcam = useSensorStore((state) => state.webcam);
   const rppgStatus = useSensorStore((state) => state.rppgStatus);
 
@@ -45,15 +44,15 @@ export function GameScreen() {
         telemetry={
           <TelemetryStrip
             metrics={[
-              { id: "bpm", label: "BPM", value: sensors.bpm, isPlaceholder: true },
-              { id: "spacer", label: "", value: "", isPlaceholder: false },
-              { id: "quality", label: "Signal Quality", value: sensors.signalQuality, isPlaceholder: true },
+              { id: "bpm", label: "BPM", value: "", isPlaceholder: true },
+              { id: "eeg", label: "EEG Focus", value: "", isPlaceholder: true },
+              { id: "clarity", label: "Clarity", value: "", isPlaceholder: true },
               {
                 id: "activity",
-                label: "Activity",
-                value: `Sim ${sensors.mode} pressure`,
+                label: "Input Mapping",
+                value: "",
                 emphasis: true,
-                isPlaceholder: true,
+                isPlaceholder: false,
               },
             ]}
           />

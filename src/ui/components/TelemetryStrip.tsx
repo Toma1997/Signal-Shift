@@ -1,4 +1,5 @@
 import type { TelemetryMetric } from "../layout/types";
+import { useGameStore } from "../../store/gameStore";
 import { useSensorStore } from "../../store/sensorStore";
 
 export interface TelemetryStripProps {
@@ -53,11 +54,20 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
   const lastLiveBpm = useSensorStore((state) => state.lastLiveBpm);
   const bpmHistory = useSensorStore((state) => state.bpmHistory);
   const heartSignalQuality = useSensorStore((state) => state.heartSignalQuality);
-  const pressureLevel = useSensorStore((state) => state.pressureLevel);
-  const bpmDeltaPct = useSensorStore((state) => state.bpmDeltaPct);
   const calibration = useSensorStore((state) => state.calibration);
   const webcam = useSensorStore((state) => state.webcam);
+  const eegStatus = useSensorStore((state) => state.eegStatus);
+  const eegAlphaPower = useSensorStore((state) => state.eegAlphaPower);
+  const eegBetaPower = useSensorStore((state) => state.eegBetaPower);
+  const latestEegFocusScore = useSensorStore((state) => state.latestEegFocusScore);
+  const clarityGainPerSecond = useSensorStore((state) => state.clarityGainPerSecond);
+  const clarityMeter = useGameStore((state) => state.clarityMeter);
+  const clarityPulseEndsAtMs = useGameStore((state) => state.clarityPulseEndsAtMs);
   const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
+  const focusRatio =
+    eegAlphaPower != null && eegBetaPower != null
+      ? eegAlphaPower / Math.max(eegBetaPower, 0.0001)
+      : null;
   const sampledHistory = sampleSeries(bpmHistory, 64);
   const width = 180;
   const height = 48;
@@ -115,41 +125,35 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
       };
     }
 
-    if (metric.id === "pressure") {
+    if (metric.id === "eeg") {
       return {
         ...metric,
-        label: "Pressure",
+        label: "EEG Focus",
         value:
-          calibration.baselineBpm != null && bpmDeltaPct != null
-            ? `${Math.round(pressureLevel)}`
-            : "Safe",
-        unit:
-          calibration.baselineBpm != null && bpmDeltaPct != null ? "%" : undefined,
-        isPlaceholder: calibration.baselineBpm == null,
+          latestEegFocusScore != null ? `${Math.round(latestEegFocusScore)}` : eegStatus,
+        unit: latestEegFocusScore != null ? "%" : undefined,
+        isPlaceholder: latestEegFocusScore == null,
       };
     }
 
-    if (metric.id === "spacer") {
+    if (metric.id === "clarity") {
       return {
         ...metric,
-        label: "",
-        value: "",
-        isPlaceholder: false,
+        label: "Clarity",
+        value: `${Math.round(clarityMeter)}%`,
+        isPlaceholder: clarityGainPerSecond == null,
       };
     }
 
-    if (metric.id === "quality") {
+    if (metric.id === "status") {
       return {
         ...metric,
-        label: "Signal Quality",
+        label: "Signal Flow",
         value:
-          heartSignalQuality > 0
-            ? `${Math.round(heartSignalQuality * 100)}`
-            : webcam.isStreaming
-              ? "Low"
-              : "Offline",
-        unit: heartSignalQuality > 0 ? "%" : undefined,
-        isPlaceholder: heartSignalQuality <= 0,
+          webcam.isStreaming
+            ? `rPPG ${heartSignalQuality > 0 ? `${Math.round(heartSignalQuality * 100)}%` : "low"}`
+            : "rPPG offline",
+        isPlaceholder: !webcam.isStreaming,
       };
     }
 
@@ -159,10 +163,8 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
         value:
           calibration.status === "collecting"
             ? `Baseline ${Math.round(calibration.progress * 100)}%`
-            : calibration.status === "complete"
-              ? `${calibration.acceptedSampleCount} accepted`
-              : metric.value,
-        isPlaceholder: calibration.status !== "complete",
+            : "EEG drives clarity / recovery · rPPG drives pressure / pace",
+        isPlaceholder: false,
       };
     }
 
@@ -227,6 +229,47 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
                 </div>
               ) : null}
             </div>
+          ) : metric.id === "eeg" ? (
+            <>
+              <span className="telemetry-strip__label">{metric.label}</span>
+              <span className="telemetry-strip__value">
+                {metric.value}
+                {metric.unit ? <span className="telemetry-strip__unit"> {metric.unit}</span> : null}
+              </span>
+              <span className="telemetry-strip__subvalue telemetry-strip__subvalue--neutral">
+                {focusRatio != null ? `Alpha/Beta ${focusRatio.toFixed(2)}` : "Alpha/Beta waiting"}
+              </span>
+              <span className="telemetry-strip__subvalue telemetry-strip__subvalue--neutral">
+                EEG {eegStatus}
+              </span>
+            </>
+          ) : metric.id === "clarity" ? (
+            <>
+              <span className="telemetry-strip__label">{metric.label}</span>
+              <span className="telemetry-strip__value">
+                {metric.value}
+              </span>
+              <div className="telemetry-strip__mini-meter" aria-hidden="true">
+                <div
+                  className="telemetry-strip__mini-meter-fill"
+                  style={{ width: `${Math.max(0, Math.min(100, clarityMeter))}%` }}
+                />
+              </div>
+              <span className="telemetry-strip__subvalue telemetry-strip__subvalue--neutral">
+                {clarityPulseEndsAtMs != null
+                  ? "Pulse active"
+                  : clarityGainPerSecond != null
+                    ? `+${clarityGainPerSecond.toFixed(1)}/s`
+                    : "EEG not charging yet"}
+              </span>
+            </>
+          ) : metric.id === "activity" ? (
+            <>
+              <span className="telemetry-strip__label">{metric.label}</span>
+              <span className="telemetry-strip__value telemetry-strip__value--wrap">
+                {metric.value}
+              </span>
+            </>
           ) : (
             <>
               <span className="telemetry-strip__label">{metric.label}</span>

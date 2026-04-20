@@ -53,6 +53,8 @@ export interface GameState {
   itemsMissed: number;
   spawnIntervalMs: number;
   lastSpawnAtMs: number;
+  clarityMeter: number;
+  clarityPulseEndsAtMs: number | null;
   resultBpmHistory: number[];
   resultBaselineBpm: number | null;
   isRunning: boolean;

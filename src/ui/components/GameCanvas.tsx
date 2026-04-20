@@ -28,6 +28,11 @@ export function GameCanvas() {
         event.preventDefault();
         store.resolveCatchAtPlayerLane();
       }
+
+      if (event.key === "e" || event.key === "E") {
+        event.preventDefault();
+        store.activateClarityPulse();
+      }
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -88,6 +93,9 @@ export function GameCanvas() {
         objects: snapshot.objects,
         score: snapshot.score.score,
         stability: snapshot.stability,
+        clarityMeter: snapshot.clarityMeter,
+        clarityPulseActive:
+          snapshot.clarityPulseEndsAtMs != null && snapshot.nowMs < snapshot.clarityPulseEndsAtMs,
       });
 
       frameId = window.requestAnimationFrame(render);

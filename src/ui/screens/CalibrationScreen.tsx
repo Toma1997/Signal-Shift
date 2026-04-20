@@ -4,6 +4,8 @@ import { useSensorStore } from "../../store/sensorStore";
 
 export function CalibrationScreen() {
   const previewRef = useRef<HTMLVideoElement | null>(null);
+  const bpmAutoStartBlockedRef = useRef(false);
+  const previousStreamingRef = useRef(false);
   const setScreen = useGameStore((state) => state.setScreen);
   const webcam = useSensorStore((state) => state.webcam);
   const webcamStream = useSensorStore((state) => state.webcamStream);
@@ -14,6 +16,10 @@ export function CalibrationScreen() {
   const rppgStatus = useSensorStore((state) => state.rppgStatus);
   const rppgError = useSensorStore((state) => state.rppgError);
   const calibration = useSensorStore((state) => state.calibration);
+  const eegStatus = useSensorStore((state) => state.eegStatus);
+  const latestEegFocusScore = useSensorStore((state) => state.latestEegFocusScore);
+  const eegSignalQuality = useSensorStore((state) => state.eegSignalQuality);
+  const eegError = useSensorStore((state) => state.eegError);
   const requestCameraPermission = useSensorStore((state) => state.requestCameraPermission);
   const startCameraStream = useSensorStore((state) => state.startCameraStream);
   const stopCameraStream = useSensorStore((state) => state.stopCameraStream);
@@ -40,7 +46,18 @@ export function CalibrationScreen() {
   }, [webcamStream]);
 
   useEffect(() => {
+    if (webcam.isStreaming && !previousStreamingRef.current) {
+      bpmAutoStartBlockedRef.current = false;
+    }
+
+    previousStreamingRef.current = webcam.isStreaming;
+  }, [webcam.isStreaming]);
+
+  useEffect(() => {
     if (webcam.isStreaming && rppgStatus === "idle") {
+      if (bpmAutoStartBlockedRef.current) {
+        return;
+      }
       void startHeartRateStream();
     }
   }, [rppgStatus, startHeartRateStream, webcam.isStreaming]);
@@ -49,90 +66,106 @@ export function CalibrationScreen() {
     if (
       webcam.isStreaming &&
       rppgStatus === "running" &&
+      eegStatus === "ready" &&
       calibration.status === "idle" &&
-      calibration.baselineBpm == null
+      (!calibration.complete ||
+        calibration.baselineBpm == null ||
+        calibration.baselineFocusScore == null)
     ) {
       startCalibration();
     }
   }, [
+    calibration.complete,
     calibration.baselineBpm,
+    calibration.baselineFocusScore,
     calibration.status,
+    eegStatus,
     rppgStatus,
     startCalibration,
     webcam.isStreaming,
   ]);
 
   const canStartCalibration =
-    webcam.isStreaming && rppgStatus === "running" && calibration.status !== "collecting";
+    webcam.isStreaming &&
+    rppgStatus === "running" &&
+    eegStatus === "ready" &&
+    calibration.status !== "collecting";
   const canBeginRun =
     webcam.isStreaming &&
     rppgStatus === "running" &&
-    calibration.status === "complete" &&
-    calibration.baselineBpm != null;
+    eegStatus === "ready" &&
+    calibration.complete &&
+    calibration.baselineBpm != null &&
+    calibration.baselineFocusScore != null;
   const recentAcceptedReadings = calibration.acceptedReadings.slice(-8);
+  const recentAcceptedFocusReadings = calibration.focusAcceptedReadings.slice(-8);
   const progressPercent = Math.round(calibration.progress * 100);
   const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
 
   return (
-    <section className="screen center-screen">
-      <div className="hero-card">
+    <section className="screen center-screen center-screen--fit">
+      <div className="hero-card hero-card--calibration">
         <h2>Calibration</h2>
-        <p>
+        <p className="calibration-copy">
           Start the camera and BPM first. As soon as the signal is live, Signal Shift captures a
           short baseline automatically so gameplay can begin with a personalized reference.
         </p>
 
-        <div
-          style={{
-            marginTop: 16,
-            borderRadius: 16,
-            overflow: "hidden",
-            border: "1px solid rgba(126, 155, 194, 0.2)",
-            background: "rgba(7, 16, 26, 0.92)",
-            aspectRatio: "16 / 9",
-            display: "grid",
-            placeItems: "center",
-          }}
-        >
+        <div className="calibration-preview">
           {webcam.isStreaming ? (
             <video
               ref={previewRef}
               autoPlay
               muted
               playsInline
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              className="calibration-preview__video"
             />
           ) : (
-            <div style={{ color: "#93a8bd", fontSize: 14 }}>Camera preview</div>
+            <div className="calibration-preview__empty">Camera preview</div>
           )}
         </div>
 
-        <p>
+        <div className="calibration-stats">
+          <p>
           Camera: {webcam.isStreaming ? "live" : "offline"} | BPM:{" "}
           {displayBpm != null ? `${displayBpm.toFixed(1)} bpm` : "waiting"} | Confidence:{" "}
-          {(heartConfidence * 100).toFixed(0)}% | Signal: {(heartSignalQuality * 100).toFixed(0)}%
-        </p>
-        <p>
-          Calibration: {calibration.status} | Accepted samples: {calibration.acceptedSampleCount}
-          {calibration.baselineBpm != null
-            ? ` | Baseline ${calibration.baselineBpm.toFixed(1)} bpm`
-            : ""}
-        </p>
-        {!canBeginRun ? (
+          {(heartConfidence * 100).toFixed(0)}% | Signal: {(heartSignalQuality * 100).toFixed(0)}% | EEG: {eegStatus}
+          </p>
           <p>
-            Begin Run unlocks after live BPM is ready and the short baseline capture completes.
+            Calibration: {calibration.status} | BPM samples: {calibration.acceptedSampleCount}
+            {calibration.baselineBpm != null
+              ? ` | Baseline ${calibration.baselineBpm.toFixed(1)} bpm`
+              : ""}
+          </p>
+          <p>
+            Focus baseline:{" "}
+            {calibration.baselineFocusScore != null
+              ? `${calibration.baselineFocusScore.toFixed(1)}`
+              : "waiting"}{" "}
+            | Focus samples: {calibration.focusSampleCount} | EEG quality:{" "}
+            {Math.round(eegSignalQuality)}%
+          </p>
+        </div>
+        {!canBeginRun ? (
+          <p className="calibration-copy">
+            Begin Run unlocks after live BPM and synthetic EEG are ready and the short baseline capture completes.
           </p>
         ) : (
-          <p>Baseline captured. You are ready to play.</p>
+          <p className="calibration-copy">BPM and focus baselines captured. You are ready to play.</p>
         )}
-        {calibration.status === "collecting" ? <p>Progress: {progressPercent}%</p> : null}
-        {recentAcceptedReadings.length > 0 ? (
-          <p>Accepted BPM: {recentAcceptedReadings.map((value) => value.toFixed(1)).join(", ")}</p>
+        {calibration.status === "collecting" ? <p className="calibration-copy">Progress: {progressPercent}%</p> : null}
+        {recentAcceptedReadings.length > 0 && calibration.status === "collecting" ? (
+          <p className="calibration-copy">Accepted BPM: {recentAcceptedReadings.map((value) => value.toFixed(1)).join(", ")}</p>
         ) : null}
-        {rppgError ? <p>{rppgError}</p> : null}
-        {calibration.error ? <p>{calibration.error}</p> : null}
+        {recentAcceptedFocusReadings.length > 0 && calibration.status === "collecting" ? (
+          <p className="calibration-copy">Accepted Focus: {recentAcceptedFocusReadings.map((value) => value.toFixed(1)).join(", ")}</p>
+        ) : null}
+        {rppgError ? <p className="calibration-copy calibration-copy--error">{rppgError}</p> : null}
+        {eegError ? <p className="calibration-copy calibration-copy--error">{eegError}</p> : null}
+        {calibration.error ? <p className="calibration-copy calibration-copy--error">{calibration.error}</p> : null}
 
-        <div className="button-row">
+        <div className="calibration-actions">
+        <div className="button-row calibration-button-row">
           {!webcam.permissionGranted && !webcam.isStreaming ? (
             <button
               className="secondary-btn"
@@ -146,6 +179,7 @@ export function CalibrationScreen() {
           <button
             className="secondary-btn"
             onClick={() => {
+              bpmAutoStartBlockedRef.current = false;
               void startCameraStream();
             }}
             disabled={webcam.status === "initializing"}
@@ -155,6 +189,7 @@ export function CalibrationScreen() {
           <button
             className="secondary-btn"
             onClick={() => {
+              bpmAutoStartBlockedRef.current = false;
               void startHeartRateStream();
             }}
             disabled={!webcam.isStreaming || rppgStatus === "initializing" || rppgStatus === "running"}
@@ -164,6 +199,7 @@ export function CalibrationScreen() {
           <button
             className="secondary-btn"
             onClick={() => {
+              bpmAutoStartBlockedRef.current = true;
               void stopHeartRateStream();
             }}
             disabled={rppgStatus === "idle"}
@@ -172,7 +208,7 @@ export function CalibrationScreen() {
           </button>
         </div>
 
-        <div className="button-row">
+        <div className="button-row calibration-button-row">
           <button className="secondary-btn" onClick={() => setScreen("setup")}>
             Back
           </button>
@@ -186,7 +222,7 @@ export function CalibrationScreen() {
               onClick={() => {
                 startCalibration();
               }}
-              disabled={!canStartCalibration || calibration.baselineBpm != null}
+              disabled={!canStartCalibration || calibration.complete}
             >
               Retry Baseline
             </button>
@@ -201,6 +237,7 @@ export function CalibrationScreen() {
           <button className="secondary-btn" onClick={stopCameraStream}>
             Stop Camera
           </button>
+        </div>
         </div>
       </div>
     </section>
