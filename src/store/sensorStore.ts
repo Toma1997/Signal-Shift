@@ -4,10 +4,12 @@ import {
   derivePressureSnapshot,
 } from "../biometrics/fusion/derivedState";
 import {
+  startBleEegService,
   startSyntheticEegService,
   type EegServiceController,
 } from "../biometrics/eeg/eegService";
 import type {
+  EegInputSource,
   EegFrameMetadata,
   EegStatus,
 } from "../biometrics/eeg/types";
@@ -73,6 +75,7 @@ interface SensorState {
   latestEegFocusScore: number | null;
   clarityCharge: number | null;
   clarityGainPerSecond: number | null;
+  eegSource: EegInputSource;
   eegEnabled: boolean;
   eegCalibrationSamplesCollected: number;
   rppgStatus: "idle" | "initializing" | "running" | "error";
@@ -86,7 +89,9 @@ interface SensorState {
   startHeartRateStream: (video?: HTMLVideoElement | null) => Promise<void>;
   stopHeartRateStream: () => Promise<void>;
   startSyntheticEeg: () => Promise<void>;
+  startBleEeg: () => Promise<void>;
   stopSyntheticEeg: () => Promise<void>;
+  setEegSource: (source: EegInputSource) => void;
   startCalibration: () => boolean;
   cancelCalibration: () => void;
 }
@@ -285,6 +290,7 @@ export const useSensorStore = create<SensorState>((set) => ({
   latestEegFocusScore: null,
   clarityCharge: null,
   clarityGainPerSecond: null,
+  eegSource: "synthetic",
   eegEnabled: false,
   eegCalibrationSamplesCollected: 0,
   rppgStatus: "idle",
@@ -304,6 +310,11 @@ export const useSensorStore = create<SensorState>((set) => ({
         mode,
       },
     })),
+  setEegSource: (source) =>
+    set({
+      eegSource: source,
+      eegError: undefined,
+    }),
   requestCameraPermission: async () => {
     set((state) => ({
       webcam: {
@@ -575,6 +586,7 @@ export const useSensorStore = create<SensorState>((set) => ({
     set({
       eegStatus: "initializing",
       eegError: undefined,
+      eegSource: "synthetic",
       eegEnabled: true,
       latestEegFrameMetadata: null,
       latestEegChannelLevels: [],
@@ -687,6 +699,128 @@ export const useSensorStore = create<SensorState>((set) => ({
         eegEnabled: false,
         eegError:
           error instanceof Error ? error.message : "Unable to start synthetic EEG.",
+      });
+    }
+  },
+  startBleEeg: async () => {
+    await useSensorStore.getState().stopSyntheticEeg();
+
+    set({
+      eegStatus: "initializing",
+      eegError: undefined,
+      eegSource: "ble",
+      eegEnabled: true,
+      latestEegFrameMetadata: null,
+      latestEegChannelLevels: [],
+      eegFocusHistory: [],
+      eegChannelHistories: [[], [], [], []],
+      eegAlphaPower: null,
+      eegBetaPower: null,
+      eegThetaPower: null,
+      eegSignalQuality: 0,
+      latestEegFocusScore: null,
+      clarityCharge: null,
+      clarityGainPerSecond: null,
+      eegCalibrationSamplesCollected: 0,
+    });
+
+    try {
+      activeEegController = await startBleEegService({
+        onStatus: (status) => {
+          useSensorStore.setState((state) => ({
+            eegStatus: status,
+            eegEnabled: status !== "idle" ? state.eegEnabled : false,
+          }));
+        },
+        onFrameMetadata: (metadata) => {
+          useSensorStore.setState((state) => ({
+            latestEegFrameMetadata: metadata,
+            eegCalibrationSamplesCollected:
+              state.eegCalibrationSamplesCollected + metadata.sampleCount,
+          }));
+        },
+        onDerivedState: (derived) => {
+          useSensorStore.setState((state) => {
+            const validFocusScore =
+              state.calibration.status === "collecting" &&
+              derived.focusScore != null &&
+              derived.eegSignalQuality >= 20
+                ? derived.focusScore
+                : null;
+            const nextFocusAcceptedReadings =
+              validFocusScore != null
+                ? [...state.calibration.focusAcceptedReadings, validFocusScore]
+                : state.calibration.focusAcceptedReadings;
+            const nextMode = getDerivedModeState(
+              state.heartReading?.bpm ?? state.lastLiveBpm,
+              state.calibration.baselineBpm,
+              derived.focusScore,
+              state.derivedModeState,
+              Date.now(),
+            );
+
+            return {
+              latestEegChannelLevels: derived.channelLevels,
+              eegAlphaPower: derived.alphaPower,
+              eegBetaPower: derived.betaPower,
+              eegThetaPower: derived.thetaPower,
+              eegSignalQuality: derived.eegSignalQuality,
+              latestEegFocusScore: derived.focusScore,
+              eegFocusHistory:
+                derived.focusScore != null
+                  ? [...state.eegFocusHistory, derived.focusScore].slice(-MAX_BPM_HISTORY)
+                  : state.eegFocusHistory,
+              eegChannelHistories: state.eegChannelHistories.map((history, index) => {
+                const nextLevel = derived.channelLevels[index];
+                return nextLevel != null
+                  ? [...history, nextLevel].slice(-MAX_BPM_HISTORY)
+                  : history;
+              }),
+              clarityCharge: derived.clarityCharge,
+              clarityGainPerSecond: derived.clarityGainPerSecond,
+              derivedModeState: nextMode.derivedModeState,
+              sensors: {
+                ...state.sensors,
+                focus: derived.focusScore != null
+                  ? Math.round(derived.focusScore)
+                  : state.sensors.focus,
+                mode: nextMode.sensorsMode,
+              },
+              calibration:
+                state.calibration.status === "collecting"
+                  ? {
+                      ...state.calibration,
+                      focusSampleCount: validFocusScore != null
+                        ? state.calibration.focusSampleCount + 1
+                        : state.calibration.focusSampleCount,
+                      latestAcceptedFocusScore:
+                        validFocusScore ?? state.calibration.latestAcceptedFocusScore,
+                      focusAcceptedReadings: nextFocusAcceptedReadings,
+                    }
+                  : state.calibration,
+            };
+          });
+        },
+        onError: (message) => {
+          useSensorStore.setState({
+            eegStatus: "error",
+            eegEnabled: false,
+            eegError: message,
+          });
+        },
+      });
+
+      set({
+        eegEnabled: true,
+        eegStatus: "ready",
+        eegError: undefined,
+      });
+    } catch (error) {
+      set({
+        eegStatus: "error",
+        eegEnabled: false,
+        eegError:
+          error instanceof Error ? error.message : "Unable to start Bluetooth EEG.",
       });
     }
   },

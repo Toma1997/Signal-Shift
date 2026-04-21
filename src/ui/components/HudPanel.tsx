@@ -9,6 +9,7 @@ import {
 
 export interface HudPanelProps {
   modeIsPlaceholder?: boolean;
+  layout?: "rail" | "footer";
 }
 
 function getModeDisplayLabel(mode: ReturnType<typeof useSensorStore.getState>["sensors"]["mode"]) {
@@ -39,12 +40,11 @@ function getModeReasonLabel(reason: ReturnType<typeof useGameStore.getState>["mo
   }
 }
 
-export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
+export function HudPanel({ modeIsPlaceholder = true, layout = "rail" }: HudPanelProps) {
   const score = useGameStore((state) => state.score);
   const stability = useGameStore((state) => state.stability);
   const corruption = useGameStore((state) => state.corruption);
   const combo = useGameStore((state) => state.combo);
-  const playerLane = useGameStore((state) => state.playerLane);
   const objectCount = useGameStore((state) => state.objects.length);
   const isRunning = useGameStore((state) => state.isRunning);
   const isGameOver = useGameStore((state) => state.isGameOver);
@@ -76,6 +76,63 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
   const clarityReady = clarityMeter >= CLARITY_PULSE_COST;
   const visibleEventLabel =
     currentEventLabel ?? (isRunning ? "Lane scan clear" : "Awaiting run start");
+  const footerLayout = layout === "footer";
+
+  if (footerLayout) {
+    return (
+      <aside className="panel hud-panel hud-panel--footer">
+        <div className="hud-panel__footer-top">
+          <div className={statusClass}>{statusLabel}</div>
+          <ModeBadge mode={mode} isPlaceholder={modeIsPlaceholder} />
+          <span className={`event-badge${currentEventLabel ? " is-live" : ""}`}>
+            {visibleEventLabel}
+          </span>
+          <span className="sensor-chip">Live BPM {displayBpm != null ? displayBpm.toFixed(1) : "--"}</span>
+          <span className="sensor-chip">Baseline {baselineBpm != null ? baselineBpm.toFixed(1) : "--"}</span>
+        </div>
+
+        <div className="hud-stat-grid hud-stat-grid--footer">
+          <HudStatCard
+            label="Score"
+            value={score.score}
+            detail={`${score.sorted} correct · ${score.wronglySorted} wrong`}
+            tone="good"
+          />
+          <HudStatCard
+            label="Stability"
+            value={stability}
+            detail="Reactor integrity"
+            tone={stability > 55 ? "good" : stability > 25 ? "warn" : "danger"}
+            meterValue={stability}
+          />
+          <HudStatCard
+            label="Clarity"
+            value={`${Math.round(clarityMeter)}%`}
+            detail={
+              clarityPulseActive
+                ? "Pulse active"
+                : clarityGainPerSecond != null
+                  ? `+${clarityGainPerSecond.toFixed(1)}/s`
+                  : "Waiting for EEG"
+            }
+            tone={clarityReady ? "good" : "neutral"}
+            meterValue={(clarityMeter / CLARITY_METER_MAX) * 100}
+          />
+          <HudStatCard
+            label="Pressure"
+            value={`${Math.round(pressureLevel)}%`}
+            detail={
+              bpmDeltaPct != null
+                ? `${bpmDeltaPct >= 0 ? "+" : ""}${bpmDeltaPct.toFixed(1)}% vs baseline`
+                : "Safe fallback"
+            }
+            tone="warn"
+            meterValue={pressureLevel}
+          />
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="panel hud-panel">
@@ -142,62 +199,36 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
           tone="warn"
           meterValue={pressureLevel}
         />
-        <HudStatCard
-          label="Signal Quality"
-          value={`${Math.round(heartSignalQuality * 100)}%`}
-          detail="Camera-derived reading reliability"
-          tone="neutral"
-          meterValue={heartSignalQuality * 100}
-        />
-      </div>
-
-      <div className="hud-compact-list">
-        <div className="stat-row">
-          <span className="stat-label">Corruption</span>
-          <strong>{corruption}</strong>
-        </div>
-        <div className="stat-row">
-          <span className="stat-label">Correctly Sorted</span>
-          <strong>{score.sorted}</strong>
-        </div>
-        <div className="stat-row">
-          <span className="stat-label">Wrongly Sorted</span>
-          <strong>{score.wronglySorted}</strong>
-        </div>
-        <div className="stat-row">
-          <span className="stat-label">Combo</span>
-          <strong>{combo}</strong>
-        </div>
-        <div className="stat-row">
-          <span className="stat-label">Live BPM</span>
-          <strong>{displayBpm != null ? displayBpm.toFixed(1) : "--"}</strong>
-        </div>
-        <div className="stat-row">
-          <span className="stat-label">Baseline BPM</span>
-          <strong>{baselineBpm != null ? baselineBpm.toFixed(1) : "--"}</strong>
-        </div>
-        <div className="stat-row">
-          <span className="stat-label">Player Lane</span>
-          <strong>{playerLane}</strong>
-        </div>
-        <div className="stat-row">
-          <span className="stat-label">Object Count</span>
-          <strong>{objectCount}</strong>
-        </div>
       </div>
 
       <div className="hud-controls">
-        <span className="hud-controls__title">Controls</span>
-        <p className="hud-controls__copy">
-          Left/Right to shift lanes. Space to catch in the active lane.
-        </p>
-        <p className="hud-controls__copy">
-          Press E for Clarity Pulse when the meter is full.
-        </p>
-        <span className="hud-controls__title">Routing Guide</span>
-        <p className="hud-controls__copy">Stabilize: Stable Signal</p>
-        <p className="hud-controls__copy">Convert: Charge Signal</p>
-        <p className="hud-controls__copy">Discard: Interference and Anomaly</p>
+        <span className="hud-controls__title">Field Stats</span>
+        <div className="hud-compact-list">
+          <div className="stat-row">
+            <span className="stat-label">Corruption</span>
+            <strong>{corruption}</strong>
+          </div>
+          <div className="stat-row">
+            <span className="stat-label">Correctly Sorted</span>
+            <strong>{score.sorted}</strong>
+          </div>
+          <div className="stat-row">
+            <span className="stat-label">Wrongly Sorted</span>
+            <strong>{score.wronglySorted}</strong>
+          </div>
+          <div className="stat-row">
+            <span className="stat-label">Combo</span>
+            <strong>{combo}</strong>
+          </div>
+          <div className="stat-row">
+            <span className="stat-label">Object Count</span>
+            <strong>{objectCount}</strong>
+          </div>
+          <div className="stat-row">
+            <span className="stat-label">Signal Quality</span>
+            <strong>{Math.round(heartSignalQuality * 100)}%</strong>
+          </div>
+        </div>
       </div>
 
       <div className="hud-actions">

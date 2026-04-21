@@ -78,6 +78,7 @@ export interface GameState {
   screen: Screen;
   startedAtMs: number | null;
   nowMs: number;
+  playfieldHeight: number;
   playerLane: Lane;
   objects: FallingObject[];
   score: ScoreSummary;

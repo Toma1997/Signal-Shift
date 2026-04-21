@@ -16,6 +16,7 @@ export function CalibrationScreen() {
   const rppgStatus = useSensorStore((state) => state.rppgStatus);
   const rppgError = useSensorStore((state) => state.rppgError);
   const calibration = useSensorStore((state) => state.calibration);
+  const eegSource = useSensorStore((state) => state.eegSource);
   const eegStatus = useSensorStore((state) => state.eegStatus);
   const latestEegFocusScore = useSensorStore((state) => state.latestEegFocusScore);
   const eegSignalQuality = useSensorStore((state) => state.eegSignalQuality);
@@ -25,6 +26,10 @@ export function CalibrationScreen() {
   const stopCameraStream = useSensorStore((state) => state.stopCameraStream);
   const startHeartRateStream = useSensorStore((state) => state.startHeartRateStream);
   const stopHeartRateStream = useSensorStore((state) => state.stopHeartRateStream);
+  const startSyntheticEeg = useSensorStore((state) => state.startSyntheticEeg);
+  const startBleEeg = useSensorStore((state) => state.startBleEeg);
+  const stopSyntheticEeg = useSensorStore((state) => state.stopSyntheticEeg);
+  const setEegSource = useSensorStore((state) => state.setEegSource);
   const startCalibration = useSensorStore((state) => state.startCalibration);
   const cancelCalibration = useSensorStore((state) => state.cancelCalibration);
 
@@ -63,11 +68,18 @@ export function CalibrationScreen() {
   }, [rppgStatus, startHeartRateStream, webcam.isStreaming]);
 
   useEffect(() => {
+    if (eegSource === "synthetic" && eegStatus === "idle") {
+      void startSyntheticEeg();
+    }
+  }, [eegSource, eegStatus, startSyntheticEeg]);
+
+  useEffect(() => {
     if (
       webcam.isStreaming &&
       rppgStatus === "running" &&
       eegStatus === "ready" &&
-      calibration.status === "idle" &&
+      calibration.status !== "collecting" &&
+      calibration.status !== "complete" &&
       (!calibration.complete ||
         calibration.baselineBpm == null ||
         calibration.baselineFocusScore == null)
@@ -107,8 +119,7 @@ export function CalibrationScreen() {
       <div className="hero-card hero-card--calibration">
         <h2>Calibration</h2>
         <p className="calibration-copy">
-          Start the camera and BPM first. As soon as the signal is live, Signal Shift captures a
-          short baseline automatically so gameplay can begin with a personalized reference.
+          Start the camera and BPM. Synthetic EEG starts here automatically, or you can switch to Bluetooth EEG.
         </p>
 
         <div className="calibration-preview">
@@ -128,8 +139,8 @@ export function CalibrationScreen() {
         <div className="calibration-stats">
           <p>
           Camera: {webcam.isStreaming ? "live" : "offline"} | BPM:{" "}
-          {displayBpm != null ? `${displayBpm.toFixed(1)} bpm` : "waiting"} | Confidence:{" "}
-          {(heartConfidence * 100).toFixed(0)}% | Signal: {(heartSignalQuality * 100).toFixed(0)}% | EEG: {eegStatus}
+          {displayBpm != null ? `${displayBpm.toFixed(1)} bpm` : "waiting"} | Conf:{" "}
+          {(heartConfidence * 100).toFixed(0)}% | Signal: {(heartSignalQuality * 100).toFixed(0)}%
           </p>
           <p>
             Calibration: {calibration.status} | BPM samples: {calibration.acceptedSampleCount}
@@ -138,7 +149,7 @@ export function CalibrationScreen() {
               : ""}
           </p>
           <p>
-            Focus baseline:{" "}
+            EEG: {eegSource === "ble" ? "Bluetooth" : "Synthetic"} {eegStatus} | Focus baseline:{" "}
             {calibration.baselineFocusScore != null
               ? `${calibration.baselineFocusScore.toFixed(1)}`
               : "waiting"}{" "}
@@ -148,23 +159,58 @@ export function CalibrationScreen() {
         </div>
         {!canBeginRun ? (
           <p className="calibration-copy">
-            Begin Run unlocks after live BPM and synthetic EEG are ready and the short baseline capture completes.
+            Begin Run unlocks after BPM and EEG are ready and the short baseline finishes.
           </p>
         ) : (
           <p className="calibration-copy">BPM and focus baselines captured. You are ready to play.</p>
         )}
         {calibration.status === "collecting" ? <p className="calibration-copy">Progress: {progressPercent}%</p> : null}
         {recentAcceptedReadings.length > 0 && calibration.status === "collecting" ? (
-          <p className="calibration-copy">Accepted BPM: {recentAcceptedReadings.map((value) => value.toFixed(1)).join(", ")}</p>
+          <p className="calibration-copy">Accepted BPM: {recentAcceptedReadings.slice(-4).map((value) => value.toFixed(1)).join(", ")}</p>
         ) : null}
         {recentAcceptedFocusReadings.length > 0 && calibration.status === "collecting" ? (
-          <p className="calibration-copy">Accepted Focus: {recentAcceptedFocusReadings.map((value) => value.toFixed(1)).join(", ")}</p>
+          <p className="calibration-copy">Accepted Focus: {recentAcceptedFocusReadings.slice(-4).map((value) => value.toFixed(1)).join(", ")}</p>
         ) : null}
         {rppgError ? <p className="calibration-copy calibration-copy--error">{rppgError}</p> : null}
         {eegError ? <p className="calibration-copy calibration-copy--error">{eegError}</p> : null}
         {calibration.error ? <p className="calibration-copy calibration-copy--error">{calibration.error}</p> : null}
 
         <div className="calibration-actions">
+        <div className="button-row calibration-button-row">
+          <button
+            className="secondary-btn"
+            onClick={() => {
+              setEegSource("synthetic");
+              void startSyntheticEeg();
+            }}
+            disabled={eegStatus === "initializing" && eegSource === "synthetic"}
+          >
+            {eegSource === "synthetic" && eegStatus === "ready"
+              ? "Synthetic EEG Ready"
+              : "Use Synthetic EEG"}
+          </button>
+          <button
+            className="secondary-btn"
+            onClick={() => {
+              setEegSource("ble");
+              void startBleEeg();
+            }}
+            disabled={eegStatus === "initializing" && eegSource === "ble"}
+          >
+            {eegSource === "ble" && eegStatus === "ready"
+              ? "Bluetooth EEG Ready"
+              : "Connect Bluetooth EEG"}
+          </button>
+          <button
+            className="secondary-btn"
+            onClick={() => {
+              void stopSyntheticEeg();
+            }}
+            disabled={eegStatus === "idle"}
+          >
+            Stop EEG
+          </button>
+        </div>
         <div className="button-row calibration-button-row">
           {!webcam.permissionGranted && !webcam.isStreaming ? (
             <button
@@ -216,17 +262,17 @@ export function CalibrationScreen() {
             <button className="secondary-btn" onClick={cancelCalibration}>
               Cancel Calibration
             </button>
-          ) : (
+          ) : calibration.status === "error" ? (
             <button
               className="secondary-btn"
               onClick={() => {
                 startCalibration();
               }}
-              disabled={!canStartCalibration || calibration.complete}
+              disabled={!canStartCalibration}
             >
-              Retry Baseline
+              Start Baseline
             </button>
-          )}
+          ) : null}
           <button
             className="primary-btn"
             onClick={() => setScreen("playing")}

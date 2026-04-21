@@ -9,6 +9,7 @@ import { useGameStore } from "../../store/gameStore";
 export function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const setPlayfieldHeight = useGameStore((state) => state.setPlayfieldHeight);
 
   useEffect(() => {
     function handleGameplayKey(event: KeyboardEvent) {
@@ -25,11 +26,19 @@ export function GameCanvas() {
       }
 
       if (event.key === " " || event.key === "Space" || event.code === "Space") {
+        if (event.repeat) {
+          event.preventDefault();
+          return;
+        }
         event.preventDefault();
         store.resolveCatchAtPlayerLane();
       }
 
       if (event.key === "e" || event.key === "E") {
+        if (event.repeat) {
+          event.preventDefault();
+          return;
+        }
         event.preventDefault();
         store.activateClarityPulse();
       }
@@ -57,18 +66,9 @@ export function GameCanvas() {
     let frameId = 0;
     const resizeCanvas = () => {
       const rect = panel.getBoundingClientRect();
-      const maxWidth = Math.max(280, Math.floor(rect.width - 6));
-      const maxHeight = Math.max(220, Math.floor(rect.height - 6));
-      const aspectRatio = GAME_CANVAS_WIDTH / GAME_CANVAS_HEIGHT;
+      const nextWidth = Math.max(320, Math.floor(rect.width));
+      const nextHeight = Math.max(260, Math.floor(rect.height));
       const devicePixelRatio = window.devicePixelRatio || 1;
-
-      let nextWidth = maxWidth;
-      let nextHeight = Math.floor(nextWidth / aspectRatio);
-
-      if (nextHeight > maxHeight) {
-        nextHeight = maxHeight;
-        nextWidth = Math.floor(nextHeight * aspectRatio);
-      }
 
       const physicalWidth = Math.floor(nextWidth * devicePixelRatio);
       const physicalHeight = Math.floor(nextHeight * devicePixelRatio);
@@ -81,6 +81,7 @@ export function GameCanvas() {
       canvas.style.width = `${nextWidth}px`;
       canvas.style.height = `${nextHeight}px`;
       ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      setPlayfieldHeight(nextHeight);
     };
 
     const render = (timestamp: number) => {
@@ -102,7 +103,6 @@ export function GameCanvas() {
     };
 
     resizeCanvas();
-    canvas.focus();
     frameId = window.requestAnimationFrame(render);
     window.addEventListener("resize", resizeCanvas);
 
@@ -110,7 +110,7 @@ export function GameCanvas() {
       window.removeEventListener("resize", resizeCanvas);
       window.cancelAnimationFrame(frameId);
     };
-  }, []);
+  }, [setPlayfieldHeight]);
 
   return (
     <div ref={panelRef} className="panel canvas-panel">
@@ -119,7 +119,6 @@ export function GameCanvas() {
         width={GAME_CANVAS_WIDTH}
         height={GAME_CANVAS_HEIGHT}
         tabIndex={0}
-        onPointerDown={() => canvasRef.current?.focus()}
         aria-label="Signal Shift game canvas"
         className="game-canvas"
       />

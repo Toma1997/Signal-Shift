@@ -1,4 +1,5 @@
 export type EegStatus = "idle" | "initializing" | "ready" | "error";
+export type EegInputSource = "synthetic" | "ble";
 
 export interface SyntheticEegFrame {
   samples: Float64Array;
@@ -12,7 +13,8 @@ export interface EegFrameMetadata {
   timestampMs: number;
   sampleCount: number;
   channelCount: number;
-  synthetic: true;
+  synthetic: boolean;
+  source: EegInputSource;
 }
 
 export interface EegDerivedState {
@@ -52,7 +54,7 @@ export interface SyntheticEegAdapterController {
   stop: () => void;
 }
 
-export interface StartSyntheticEegServiceOptions {
+export interface StartEegServiceOptions {
   onStatus?: (status: EegStatus) => void;
   onFrameMetadata?: (metadata: EegFrameMetadata) => void;
   onDerivedState?: (state: EegDerivedState) => void;

@@ -32,6 +32,7 @@ import { scoreCatch, scoreMiss, shouldGameOver } from "../game/scoring";
 import { spawnRandomObject } from "../game/spawn";
 import { useSensorStore } from "./sensorStore";
 import type { FallingObject, GameState, Lane, Screen } from "../game/types";
+import { GAME_CANVAS_HEIGHT } from "../game/engine";
 
 function createInitialScore() {
   return {
@@ -48,6 +49,7 @@ function createInitialState(): GameState {
     screen: "title",
     startedAtMs: null,
     nowMs: 0,
+    playfieldHeight: GAME_CANVAS_HEIGHT,
     playerLane: 1,
     objects: [],
     score: createInitialScore(),
@@ -157,6 +159,7 @@ interface GameStore extends GameState {
   setPlayerLane: (lane: Lane) => void;
   moveLeft: () => void;
   moveRight: () => void;
+  setPlayfieldHeight: (height: number) => void;
   activateClarityPulse: () => void;
   tick: (nowMs: number) => void;
   spawnObject: () => void;
@@ -221,6 +224,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => ({
       playerLane: (state.playerLane < 2 ? state.playerLane + 1 : 2) as Lane,
     })),
+  setPlayfieldHeight: (height) =>
+    set({
+      playfieldHeight: Math.max(260, Math.round(height)),
+    }),
   activateClarityPulse: () =>
     set((state) => {
       if (
@@ -350,7 +357,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const remaining: FallingObject[] = [];
 
       for (const object of nextState.objects) {
-        if (!isObjectMissed(object)) {
+        if (!isObjectMissed(object, nextState.playfieldHeight)) {
           remaining.push(object);
           continue;
         }
@@ -404,7 +411,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       const target = [...state.objects]
-        .filter((object) => isObjectCatchable(object, state.playerLane))
+        .filter((object) =>
+          isObjectCatchable(object, state.playerLane, state.playfieldHeight),
+        )
         .sort((a, b) => b.y - a.y)[0];
 
       if (!target) {
@@ -412,7 +421,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       const nextSurvivedSeconds = getSurvivedSeconds(state, state.nowMs);
-      const delta = scoreCatch(target.kind, target.lane);
+      const delta = scoreCatch(target.kind, state.playerLane);
       const activeEvent = state.activeEvents[0] ?? null;
       const staticLeakLane = getStaticLeakLane(activeEvent);
       const nextValues = applyScoreDelta(state, delta, nextSurvivedSeconds);
@@ -460,7 +469,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const nextSurvivedSeconds = getSurvivedSeconds(state, state.nowMs);
 
       for (const object of state.objects) {
-        if (!isObjectMissed(object)) {
+        if (!isObjectMissed(object, state.playfieldHeight)) {
           remaining.push(object);
           continue;
         }

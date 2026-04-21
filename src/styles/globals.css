@@ -42,7 +42,7 @@ button {
   height: 100dvh;
   min-height: 100dvh;
   max-height: 100dvh;
-  padding: 8px;
+  padding: 2px 4px;
   overflow: hidden;
 }
 
@@ -55,7 +55,7 @@ button {
   width: 100%;
   height: 100%;
   min-height: 0;
-  max-width: 1520px;
+  max-width: none;
   overflow: hidden;
 }
 
@@ -84,11 +84,21 @@ button {
 
 .hero-card--calibration {
   width: min(820px, 100%);
-  max-height: calc(min(100vh, 100dvh) - 40px);
-  padding: 18px;
+  max-height: calc(min(100vh, 100dvh) - 20px);
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
+  overflow: hidden;
+}
+
+.hero-card--results {
+  width: min(920px, 100%);
+  max-height: calc(min(100vh, 100dvh) - 20px);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   overflow: hidden;
 }
 
@@ -108,8 +118,8 @@ button {
 .calibration-copy {
   margin: 0;
   color: #dce6f2;
-  line-height: 1.35;
-  font-size: 14px;
+  line-height: 1.25;
+  font-size: 13px;
 }
 
 .calibration-copy--error {
@@ -121,13 +131,13 @@ button {
   overflow: hidden;
   border: 1px solid rgba(126, 155, 194, 0.2);
   background: rgba(7, 16, 26, 0.92);
-  width: min(100%, 520px);
+  width: min(100%, 500px);
   aspect-ratio: 4 / 3;
   display: grid;
   place-items: center;
   min-height: 0;
   flex: 0 0 auto;
-  max-height: 40vh;
+  max-height: 34vh;
   align-self: center;
 }
 
@@ -144,20 +154,21 @@ button {
 
 .calibration-stats {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .calibration-stats p {
   margin: 0;
   color: #cbd5e1;
   font-size: 12px;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .calibration-actions {
   margin-top: auto;
   display: grid;
-  gap: 8px;
+  gap: 7px;
+  flex-shrink: 0;
 }
 
 .calibration-button-row {
@@ -167,7 +178,8 @@ button {
 
 .hero-card--calibration .primary-btn,
 .hero-card--calibration .secondary-btn {
-  padding: 10px 14px;
+  padding: 9px 13px;
+  font-size: 12px;
 }
 
 .setup-status-card {
@@ -253,11 +265,21 @@ button {
 }
 
 .results-chart {
-  margin-top: 20px;
-  padding: 14px;
+  margin-top: 0;
+  padding: 10px 12px;
   border-radius: 16px;
   border: 1px solid rgba(126, 155, 194, 0.18);
   background: rgba(7, 16, 26, 0.78);
+}
+
+.results-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 16px;
+}
+
+.results-summary-grid p {
+  margin: 0;
 }
 
 .results-chart__head {
@@ -266,21 +288,21 @@ button {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .results-chart__summary {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   color: #93a8bd;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .results-chart__svg {
   width: 100%;
-  height: 180px;
+  height: 132px;
   display: block;
 }
 
@@ -293,6 +315,12 @@ button {
   stroke: rgba(148, 163, 184, 0.16);
   stroke-width: 1;
   stroke-dasharray: 4 6;
+}
+
+.results-chart__gridline--divider {
+  stroke: rgba(148, 163, 184, 0.28);
+  stroke-width: 1.2;
+  stroke-dasharray: none;
 }
 
 .results-chart__tick {
@@ -323,12 +351,12 @@ button {
 }
 
 .results-chart__timeline {
-  margin-top: 10px;
+  margin-top: 6px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
   color: #cbd5e1;
-  font-size: 12px;
+  font-size: 11px;
   flex-wrap: wrap;
 }
 
@@ -356,32 +384,35 @@ button {
 }
 
 .game-layout--fixed .game-frame {
-  grid-template-rows: minmax(0, 1fr) minmax(92px, 108px);
-  gap: 4px;
+  grid-template-rows: minmax(0, 1fr) minmax(96px, 104px);
+  gap: 1px;
 }
 
 .game-layout--fixed .game-frame__main {
-  gap: 4px;
+  gap: 1px;
 }
 
 .game-layout--fixed .game-frame__rail {
-  grid-template-rows: minmax(156px, 28%) minmax(0, 1fr);
-  gap: 4px;
+  grid-template-rows: minmax(186px, 30%) minmax(0, 1fr);
+  gap: 1px;
 }
 
 .game-layout--fixed .game-frame__telemetry {
   height: auto;
+  width: calc(100% - var(--game-frame-rail-width) - var(--game-frame-gap));
+  justify-self: start;
 }
 
 .camera-panel {
   min-height: 0;
   min-width: 0;
-  padding: 6px;
+  padding: 5px;
   display: flex;
   flex-direction: column;
   gap: 3px;
   position: relative;
   overflow: hidden;
+  height: 100%;
 }
 
 .camera-panel__header {
@@ -473,7 +504,8 @@ button {
 .canvas-panel {
   min-height: 0;
   height: 100%;
-  padding: 1px;
+  flex: 1 1 auto;
+  padding: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -486,7 +518,13 @@ button {
   height: auto;
   max-width: 100%;
   max-height: 100%;
-  border-radius: 14px;
+  border-radius: 12px;
+}
+
+.game-canvas:focus,
+.game-canvas:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .hud-panel {
@@ -552,8 +590,8 @@ button {
 .hud-copy {
   margin: 0;
   color: #93a8bd;
-  font-size: 10px;
-  line-height: 1.25;
+  font-size: 9px;
+  line-height: 1.15;
   max-width: 22ch;
 }
 
@@ -818,15 +856,16 @@ button {
 
 .hud-controls {
   margin-top: 0;
-  padding-top: 8px;
+  padding-top: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 0;
 }
 
 .hud-controls__title {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 3px;
   color: #93a8bd;
-  font-size: 11px;
+  font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -834,14 +873,14 @@ button {
 .hud-controls__copy {
   margin: 0;
   color: #dce6f2;
-  font-size: 11px;
-  line-height: 1.35;
+  font-size: 10px;
+  line-height: 1.2;
 }
 
 .hud-actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   margin-top: 0;
 }
 
@@ -856,11 +895,11 @@ button {
 .telemetry-strip {
   min-height: 0;
   height: 100%;
-  padding: 6px 8px;
+  padding: 3px 5px;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 2.45fr) minmax(0, 0.5fr) minmax(0, 0.55fr);
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.38fr);
   align-items: stretch;
-  gap: 4px;
+  gap: 2px;
   overflow: hidden;
   min-width: 0;
 }
@@ -910,10 +949,19 @@ button {
 
 .telemetry-strip__trend-layout {
   display: grid;
-  grid-template-columns: minmax(74px, 84px) minmax(0, 1fr);
+  grid-template-columns: minmax(78px, 88px) minmax(0, 1fr);
   gap: 3px;
   align-items: stretch;
   min-height: 0;
+}
+
+.telemetry-strip__metric.is-bpm .telemetry-strip__trend-layout {
+  grid-template-columns: minmax(92px, 102px) minmax(0, 1fr);
+}
+
+.telemetry-strip__metric.is-eeg .telemetry-strip__trend-layout {
+  grid-template-columns: minmax(124px, 136px) minmax(0, 1fr);
+  gap: 5px;
 }
 
 .telemetry-strip__value {
@@ -953,6 +1001,61 @@ button {
   color: #93a8bd;
 }
 
+.telemetry-strip__channel-row {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.telemetry-strip__channel-value {
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.telemetry-strip__channel-value.is-ch1 {
+  color: #4dd0a7;
+}
+
+.telemetry-strip__channel-value.is-ch2 {
+  color: #60a5fa;
+}
+
+.telemetry-strip__channel-value.is-ch3 {
+  color: #fb923c;
+}
+
+.telemetry-strip__channel-value.is-ch4 {
+  color: #e879f9;
+}
+
+.telemetry-strip__chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.telemetry-strip__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #dce6f2;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.telemetry-strip__chip--warn {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fdba74;
+}
+
 .telemetry-strip__mini-meter {
   width: 100%;
   height: 7px;
@@ -988,6 +1091,10 @@ button {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
+.telemetry-strip__sparkline-shell--eeg {
+  grid-template-columns: 34px minmax(0, 1fr);
+}
+
 .telemetry-strip__sparkline-scale {
   display: flex;
   flex-direction: column;
@@ -1001,10 +1108,50 @@ button {
   min-width: 20px;
 }
 
+.telemetry-strip__sparkline-scale--bands {
+  justify-content: stretch;
+  min-width: 34px;
+  padding: 0;
+  height: 46px;
+}
+
+.telemetry-strip__band-label {
+  height: 11.5px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.telemetry-strip__band-label.is-ch1 {
+  color: #4dd0a7;
+}
+
+.telemetry-strip__band-label.is-ch2 {
+  color: #60a5fa;
+}
+
+.telemetry-strip__band-label.is-ch3 {
+  color: #fb923c;
+}
+
+.telemetry-strip__band-label.is-ch4 {
+  color: #e879f9;
+}
+
 .telemetry-strip__sparkline-gridline {
   stroke: rgba(148, 163, 184, 0.16);
   stroke-width: 1;
   stroke-dasharray: 4 5;
+}
+
+.telemetry-strip__sparkline-gridline.is-divider {
+  stroke: rgba(148, 163, 184, 0.34);
+  stroke-width: 1.2;
+  stroke-dasharray: none;
 }
 
 .telemetry-strip__sparkline-path {
@@ -1017,6 +1164,8 @@ button {
 
 .telemetry-strip__sparkline-path.is-eeg {
   stroke: #4dd0a7;
+  stroke-width: 1.75;
+  opacity: 0.98;
 }
 
 .telemetry-strip__sparkline-baseline {
@@ -1076,6 +1225,12 @@ button {
   min-height: 0;
 }
 
+.game-screen__center-stack {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .game-screen__hud-stack {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -1113,6 +1268,10 @@ button {
 }
 
 @media (max-width: 900px) {
+  .game-layout--fixed .game-frame__telemetry {
+    width: 100%;
+  }
+
   .telemetry-strip {
     grid-template-columns: 1fr 1fr;
     align-items: start;
@@ -1126,42 +1285,43 @@ button {
 
 @media (max-height: 860px) {
   .app-shell--gameplay {
-    padding: 10px;
+    padding: 1px 3px;
   }
 
   .game-layout--fixed .game-frame {
-    grid-template-rows: minmax(0, 1fr) minmax(94px, 114px);
-    gap: 10px;
+    grid-template-rows: minmax(0, 1fr) minmax(92px, 100px);
+    gap: 1px;
   }
 
   .game-layout--fixed .game-frame__main,
   .game-layout--fixed .game-frame__rail {
-    gap: 10px;
+    gap: 1px;
   }
 
   .game-layout--fixed .game-frame__rail {
-    grid-template-rows: minmax(180px, 30%) minmax(0, 1fr);
+    grid-template-rows: minmax(160px, 28%) minmax(0, 1fr);
   }
 
   .hud-panel {
-    padding: 10px;
-    gap: 8px;
+    padding: 6px 7px;
+    gap: 5px;
   }
 
   .hud-copy,
   .hud-controls__copy {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .hud-stat-card {
-    padding: 8px 9px;
+    padding: 6px 7px;
   }
 
   .camera-panel {
-    padding: 8px;
+    padding: 5px;
   }
 
   .camera-panel__empty {
     font-size: 12px;
   }
+
 }

@@ -1,7 +1,9 @@
 import {
+  AthenaWasmDecoder,
   band_powers,
   initEegWasm,
 } from "@elata-biosciences/eeg-web";
+import { BleTransport } from "@elata-biosciences/eeg-web-ble";
 import eegWasmUrl from "@elata-biosciences/eeg-web/wasm/eeg_wasm_bg.wasm?url";
 import { deriveEegMetrics } from "./eegMetrics";
 import { startSyntheticEegAdapter } from "./syntheticAdapter";
@@ -9,7 +11,7 @@ import type {
   EegDerivedState,
   EegFrameMetadata,
   EegServiceController,
-  StartSyntheticEegServiceOptions,
+  StartEegServiceOptions,
   SyntheticEegFrame,
 } from "./types";
 
@@ -34,6 +36,22 @@ function getFrameMetadata(frame: SyntheticEegFrame, channelCount: number): EegFr
     sampleCount: frame.samples.length,
     channelCount,
     synthetic: true,
+    source: "synthetic",
+  };
+}
+
+function getBleFrameMetadata(
+  channelCount: number,
+  sampleRateHz: number,
+  sampleFrames: number,
+): EegFrameMetadata {
+  return {
+    sampleRateHz,
+    timestampMs: Date.now(),
+    sampleCount: sampleFrames * channelCount,
+    channelCount,
+    synthetic: false,
+    source: "ble",
   };
 }
 
@@ -91,8 +109,44 @@ function deriveMetrics(
   }
 }
 
+function deriveMetricsFromChannels(
+  channelSamples: number[][],
+  sampleRateHz: number,
+  previousDerivedState: EegDerivedState | null,
+): EegDerivedState {
+  const primaryChannel = Float32Array.from(channelSamples[0] ?? []);
+  const powers = band_powers(primaryChannel, sampleRateHz);
+
+  try {
+    const channelLevels = channelSamples.map((samples) => {
+      if (samples.length === 0) {
+        return 0;
+      }
+
+      const average = samples.reduce((sum, value) => sum + Math.abs(value), 0) / samples.length;
+      return Number(average.toFixed(2));
+    });
+
+    return deriveEegMetrics({
+      bandPowers: {
+        alpha: powers.alpha,
+        beta: powers.beta,
+        theta: powers.theta,
+        total: powers.total,
+      },
+      channelLevels,
+      previousFocusScore: previousDerivedState?.focusScore ?? null,
+      previousClarityCharge: previousDerivedState?.clarityCharge ?? null,
+      previousClarityGainPerSecond:
+        previousDerivedState?.clarityGainPerSecond ?? null,
+    });
+  } finally {
+    powers.free();
+  }
+}
+
 export async function startSyntheticEegService(
-  options: StartSyntheticEegServiceOptions = {},
+  options: StartEegServiceOptions = {},
 ): Promise<EegServiceController> {
   const {
     onStatus,
@@ -136,6 +190,87 @@ export async function startSyntheticEegService(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to start synthetic EEG.";
+    onStatus?.("error");
+    onError?.(message);
+    throw error;
+  }
+}
+
+export async function startBleEegService(
+  options: StartEegServiceOptions = {},
+): Promise<EegServiceController> {
+  const {
+    onStatus,
+    onFrameMetadata,
+    onDerivedState,
+    onError,
+  } = options;
+
+  try {
+    onStatus?.("initializing");
+    await ensureEegWasmReady();
+    let latestDerivedState: EegDerivedState | null = null;
+
+    const transport = new BleTransport({
+      deviceOptions: {
+        athenaDecoderFactory: () => new AthenaWasmDecoder(),
+      },
+      sourceName: "signal-shift-ble",
+    });
+
+    transport.onStatus = (status) => {
+      if (status.state === "error") {
+        onStatus?.("error");
+        onError?.(status.reason ?? "Unable to connect to Bluetooth EEG.");
+        return;
+      }
+
+      if (status.state === "streaming" || status.state === "connected") {
+        onStatus?.("ready");
+        return;
+      }
+
+      if (status.state === "idle" || status.state === "disconnected") {
+        onStatus?.("idle");
+        return;
+      }
+
+      onStatus?.("initializing");
+    };
+
+    transport.onFrame = (frame) => {
+      const sampleFrames = frame.eeg.samples[0]?.length ?? 0;
+      const derived = deriveMetricsFromChannels(
+        frame.eeg.samples,
+        frame.eeg.sampleRateHz,
+        latestDerivedState,
+      );
+      latestDerivedState = derived;
+
+      onFrameMetadata?.(
+        getBleFrameMetadata(
+          frame.eeg.channelCount,
+          frame.eeg.sampleRateHz,
+          sampleFrames,
+        ),
+      );
+      onDerivedState?.(derived);
+      onStatus?.("ready");
+    };
+
+    await transport.connect();
+    await transport.startStreaming();
+
+    return {
+      stop: async () => {
+        await transport.stop();
+        await transport.disconnect();
+        onStatus?.("idle");
+      },
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to start Bluetooth EEG.";
     onStatus?.("error");
     onError?.(message);
     throw error;
