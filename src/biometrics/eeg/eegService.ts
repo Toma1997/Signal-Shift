@@ -48,6 +48,20 @@ function getPrimaryChannel(samples: Float32Array, channelCount: number): Float32
   return channelSamples;
 }
 
+function getChannelLevels(samples: Float32Array, channelCount: number): number[] {
+  const sampleFrames = Math.floor(samples.length / channelCount);
+  const sums = new Array<number>(channelCount).fill(0);
+
+  for (let sampleIndex = 0; sampleIndex < sampleFrames; sampleIndex += 1) {
+    for (let channelIndex = 0; channelIndex < channelCount; channelIndex += 1) {
+      const value = samples[sampleIndex * channelCount + channelIndex] ?? 0;
+      sums[channelIndex] += Math.abs(value);
+    }
+  }
+
+  return sums.map((sum) => Number((sum / Math.max(1, sampleFrames)).toFixed(2)));
+}
+
 function deriveMetrics(
   samples: Float32Array,
   sampleRateHz: number,
@@ -58,6 +72,7 @@ function deriveMetrics(
   const powers = band_powers(primaryChannel, sampleRateHz);
 
   try {
+    const channelLevels = getChannelLevels(samples, channelCount);
     return deriveEegMetrics({
       bandPowers: {
         alpha: powers.alpha,
@@ -65,6 +80,7 @@ function deriveMetrics(
         theta: powers.theta,
         total: powers.total,
       },
+      channelLevels,
       previousFocusScore: previousDerivedState?.focusScore ?? null,
       previousClarityCharge: previousDerivedState?.clarityCharge ?? null,
       previousClarityGainPerSecond:

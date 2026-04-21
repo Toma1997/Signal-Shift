@@ -19,6 +19,7 @@ export interface EegDerivedState {
   alphaPower: number;
   betaPower: number;
   thetaPower: number;
+  channelLevels: number[];
   focusScore: number | null;
   clarityCharge: number | null;
   clarityGainPerSecond: number | null;

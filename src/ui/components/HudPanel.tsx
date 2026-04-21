@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { HudStatCard } from "./HudStatCard";
 import { ModeBadge } from "./ModeBadge";
 import { useGameStore } from "../../store/gameStore";
@@ -10,6 +9,34 @@ import {
 
 export interface HudPanelProps {
   modeIsPlaceholder?: boolean;
+}
+
+function getModeDisplayLabel(mode: ReturnType<typeof useSensorStore.getState>["sensors"]["mode"]) {
+  switch (mode) {
+    case "calm":
+      return "Calm Drift";
+    case "pressure":
+      return "Pressure Surge";
+    default:
+      return "Balanced";
+  }
+}
+
+function getModeReasonLabel(reason: ReturnType<typeof useGameStore.getState>["modeReason"]) {
+  switch (reason) {
+    case "low_bpm":
+      return "low BPM + stable focus";
+    case "high_bpm":
+      return "elevated BPM pressure";
+    case "bpm_spike":
+      return "BPM spike detected";
+    case "high_focus":
+      return "high focus settling the field";
+    case "mixed":
+      return "mixed biometric signals";
+    default:
+      return "default balance";
+  }
 }
 
 export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
@@ -26,6 +53,8 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
   const activateClarityPulse = useGameStore((state) => state.activateClarityPulse);
   const startRun = useGameStore((state) => state.startRun);
   const resetRun = useGameStore((state) => state.resetRun);
+  const currentEventLabel = useGameStore((state) => state.currentEventLabel);
+  const modeReason = useGameStore((state) => state.modeReason);
   const mode = useSensorStore((state) => state.sensors.mode);
   const heartReading = useSensorStore((state) => state.heartReading);
   const lastLiveBpm = useSensorStore((state) => state.lastLiveBpm);
@@ -42,16 +71,11 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
     : isRunning
       ? "status-badge"
       : "status-badge is-idle";
-
-  const currentEventLabel = useMemo(() => {
-    if (!objectCount) {
-      return isRunning ? "Lane scan clear" : "Awaiting run start";
-    }
-    return "Inbound traffic active";
-  }, [isRunning, objectCount]);
   const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
   const clarityPulseActive = clarityPulseEndsAtMs != null;
   const clarityReady = clarityMeter >= CLARITY_PULSE_COST;
+  const visibleEventLabel =
+    currentEventLabel ?? (isRunning ? "Lane scan clear" : "Awaiting run start");
 
   return (
     <aside className="panel hud-panel">
@@ -66,11 +90,17 @@ export function HudPanel({ modeIsPlaceholder = true }: HudPanelProps) {
       <div className="hud-panel__badges">
         <div className="hud-panel__badge-group">
           <span className="hud-panel__badge-label">Mode</span>
-          <ModeBadge mode={mode} isPlaceholder={modeIsPlaceholder} />
+          <div className="hud-panel__mode-block">
+            <ModeBadge mode={mode} isPlaceholder={modeIsPlaceholder} />
+            <span className="hud-panel__mode-title">{getModeDisplayLabel(mode)}</span>
+            <span className="hud-panel__mode-reason">{getModeReasonLabel(modeReason)}</span>
+          </div>
         </div>
         <div className="hud-panel__badge-group">
           <span className="hud-panel__badge-label">Event</span>
-          <span className="event-badge">{currentEventLabel}</span>
+          <span className={`event-badge${currentEventLabel ? " is-live" : ""}`}>
+            {visibleEventLabel}
+          </span>
         </div>
       </div>
 

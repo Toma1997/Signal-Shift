@@ -53,6 +53,9 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
   const heartReading = useSensorStore((state) => state.heartReading);
   const lastLiveBpm = useSensorStore((state) => state.lastLiveBpm);
   const bpmHistory = useSensorStore((state) => state.bpmHistory);
+  const eegFocusHistory = useSensorStore((state) => state.eegFocusHistory);
+  const latestEegChannelLevels = useSensorStore((state) => state.latestEegChannelLevels);
+  const eegChannelHistories = useSensorStore((state) => state.eegChannelHistories);
   const heartSignalQuality = useSensorStore((state) => state.heartSignalQuality);
   const calibration = useSensorStore((state) => state.calibration);
   const webcam = useSensorStore((state) => state.webcam);
@@ -69,7 +72,8 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
       ? eegAlphaPower / Math.max(eegBetaPower, 0.0001)
       : null;
   const sampledHistory = sampleSeries(bpmHistory, 64);
-  const width = 180;
+  const bpmGraphWidth = 168;
+  const eegGraphWidth = 238;
   const height = 48;
   const sparklineSeries = sampledHistory.length
     ? sampledHistory
@@ -77,7 +81,7 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
       ? [displayBpm]
       : [];
   const bpmSparkline = sparklineSeries.length
-    ? buildSparklinePath(sparklineSeries, width, height)
+    ? buildSparklinePath(sparklineSeries, bpmGraphWidth, height)
     : "";
   const paddedSeries =
     calibration.baselineBpm != null ? [...sparklineSeries, calibration.baselineBpm] : sparklineSeries;
@@ -110,6 +114,41 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
           }));
         })()
       : [];
+  const eegSeriesCollection = eegChannelHistories.map((history, index) => {
+    const sampled = sampleSeries(history, 64);
+    if (sampled.length) {
+      return sampled;
+    }
+    const fallback = latestEegChannelLevels[index];
+    return fallback != null ? [fallback] : [];
+  });
+  const eegSeriesValues = eegSeriesCollection.flat();
+  const eegGraphMin = eegSeriesValues.length ? Math.min(...eegSeriesValues) : null;
+  const eegGraphMax = eegSeriesValues.length ? Math.max(...eegSeriesValues) : null;
+  const eegTickPositions =
+    eegGraphMin != null && eegGraphMax != null
+      ? (() => {
+          const ticks = buildGraphTicks(eegGraphMin, eegGraphMax);
+          const verticalPadding = 4;
+          const innerHeight = Math.max(1, height - verticalPadding * 2);
+          const range = Math.max(1, eegGraphMax - eegGraphMin);
+
+          return ticks.map((tick) => ({
+            value: tick,
+            y:
+              verticalPadding + (innerHeight - ((tick - eegGraphMin) / range) * innerHeight),
+          }));
+        })()
+      : [];
+  const eegSparklinePaths =
+    eegGraphMin != null && eegGraphMax != null
+      ? eegSeriesCollection.map((series) =>
+          series.length
+            ? buildSparklinePath(series, eegGraphWidth, height)
+            : "",
+        )
+      : [];
+  const eegStrokeColors = ["#4dd0a7", "#60a5fa", "#fb923c", "#e879f9"];
 
   const resolvedMetrics = metrics.map((metric) => {
     if (metric.id === "bpm") {
@@ -176,7 +215,7 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
       {resolvedMetrics.map((metric) => (
         <div
           key={metric.id}
-          className={`telemetry-strip__metric${metric.emphasis ? " is-emphasis" : ""}${metric.isPlaceholder ? " is-placeholder" : ""}${metric.id === "bpm" ? " is-trend" : ""}`}
+          className={`telemetry-strip__metric${metric.emphasis ? " is-emphasis" : ""}${metric.isPlaceholder ? " is-placeholder" : ""}${metric.id === "bpm" || metric.id === "eeg" ? " is-trend" : ""}`}
         >
           {metric.id === "bpm" ? (
             <div className="telemetry-strip__trend-layout">
@@ -200,7 +239,7 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
                     ))}
                   </div>
                   <svg
-                    viewBox={`0 0 ${width} ${height}`}
+                    viewBox={`0 0 ${bpmGraphWidth} ${height}`}
                     className="telemetry-strip__sparkline"
                     role="img"
                     aria-label="Live BPM trend during gameplay"
@@ -209,7 +248,7 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
                       <line
                         key={tick.value}
                         x1="0"
-                        x2={width}
+                        x2={bpmGraphWidth}
                         y1={tick.y}
                         y2={tick.y}
                         className="telemetry-strip__sparkline-gridline"
@@ -218,7 +257,7 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
                     {baselineY != null ? (
                       <line
                         x1="0"
-                        x2={width}
+                        x2={bpmGraphWidth}
                         y1={baselineY}
                         y2={baselineY}
                         className="telemetry-strip__sparkline-baseline"
@@ -230,19 +269,63 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
               ) : null}
             </div>
           ) : metric.id === "eeg" ? (
-            <>
-              <span className="telemetry-strip__label">{metric.label}</span>
-              <span className="telemetry-strip__value">
-                {metric.value}
-                {metric.unit ? <span className="telemetry-strip__unit"> {metric.unit}</span> : null}
-              </span>
-              <span className="telemetry-strip__subvalue telemetry-strip__subvalue--neutral">
-                {focusRatio != null ? `Alpha/Beta ${focusRatio.toFixed(2)}` : "Alpha/Beta waiting"}
-              </span>
-              <span className="telemetry-strip__subvalue telemetry-strip__subvalue--neutral">
-                EEG {eegStatus}
-              </span>
-            </>
+            <div className="telemetry-strip__trend-layout">
+              <div className="telemetry-strip__trend-copy">
+                <span className="telemetry-strip__label">{metric.label}</span>
+                <span className="telemetry-strip__value telemetry-strip__value--trend">
+                  {metric.value}
+                  {metric.unit ? <span className="telemetry-strip__unit"> {metric.unit}</span> : null}
+                </span>
+                {calibration.baselineFocusScore != null ? (
+                  <span className="telemetry-strip__subvalue">
+                    Baseline {calibration.baselineFocusScore.toFixed(1)}
+                  </span>
+                ) : null}
+                <span className="telemetry-strip__subvalue telemetry-strip__subvalue--neutral telemetry-strip__subvalue--wrap">
+                  Ch1 {latestEegChannelLevels[0]?.toFixed(1) ?? "--"} · Ch2 {latestEegChannelLevels[1]?.toFixed(1) ?? "--"} ·
+                  Ch3 {latestEegChannelLevels[2]?.toFixed(1) ?? "--"} · Ch4 {latestEegChannelLevels[3]?.toFixed(1) ?? "--"}
+                </span>
+                <span className="telemetry-strip__subvalue telemetry-strip__subvalue--neutral">
+                  {focusRatio != null ? `Alpha/Beta ${focusRatio.toFixed(2)}` : `EEG ${eegStatus}`}
+                </span>
+              </div>
+              {eegSparklinePaths.some(Boolean) ? (
+                <div className="telemetry-strip__sparkline-shell">
+                  <div className="telemetry-strip__sparkline-scale" aria-hidden="true">
+                    {eegTickPositions.map((tick) => (
+                      <span key={tick.value}>{Math.round(tick.value)}</span>
+                    ))}
+                  </div>
+                  <svg
+                    viewBox={`0 0 ${eegGraphWidth} ${height}`}
+                    className="telemetry-strip__sparkline"
+                    role="img"
+                    aria-label="Live EEG focus trend during gameplay"
+                  >
+                    {eegTickPositions.map((tick) => (
+                      <line
+                        key={tick.value}
+                        x1="0"
+                        x2={eegGraphWidth}
+                        y1={tick.y}
+                        y2={tick.y}
+                        className="telemetry-strip__sparkline-gridline"
+                      />
+                    ))}
+                    {eegSparklinePaths.map((path, index) =>
+                      path ? (
+                        <path
+                          key={eegStrokeColors[index] ?? index}
+                          d={path}
+                          className="telemetry-strip__sparkline-path is-eeg"
+                          style={{ stroke: eegStrokeColors[index] ?? "#4dd0a7" }}
+                        />
+                      ) : null,
+                    )}
+                  </svg>
+                </div>
+              ) : null}
+            </div>
           ) : metric.id === "clarity" ? (
             <>
               <span className="telemetry-strip__label">{metric.label}</span>

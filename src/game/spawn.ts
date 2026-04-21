@@ -1,19 +1,11 @@
 import {
   baseFallSpeed,
+  getModeGameplayProfile,
   laneCount,
   speedVariance,
 } from "./constants";
-import type { FallingObject, Lane, SignalKind } from "./types";
+import type { BiometricMode, FallingObject, Lane, SignalKind } from "./types";
 import { getTargetLane } from "./scoring";
-
-const KIND_TABLE: Array<{ kind: SignalKind; weight: number }> = [
-  { kind: "stable_signal", weight: 3 },
-  { kind: "charge_signal", weight: 3 },
-  { kind: "interference", weight: 3 },
-  { kind: "anomaly", weight: 1.5 },
-];
-
-const TOTAL_WEIGHT = KIND_TABLE.reduce((sum, entry) => sum + entry.weight, 0);
 
 function randomWrongLane(targetLane: Lane): Lane {
   const candidates = Array.from({ length: laneCount }, (_, lane) => lane as Lane).filter(
@@ -28,17 +20,27 @@ function randomLaneForKind(kind: SignalKind): Lane {
   return placeInCorrectLane ? targetLane : randomWrongLane(targetLane);
 }
 
-function randomKind(): SignalKind {
-  let threshold = Math.random() * TOTAL_WEIGHT;
+function randomKind(mode: BiometricMode): SignalKind {
+  const profile = getModeGameplayProfile(mode);
+  const anomalyChance = profile.anomalyChance;
+  const interferenceChance = profile.interferenceChance;
+  const stableChance = (1 - anomalyChance - interferenceChance) / 2;
+  const chargeChance = stableChance;
+  const roll = Math.random();
 
-  for (const entry of KIND_TABLE) {
-    threshold -= entry.weight;
-    if (threshold <= 0) {
-      return entry.kind;
-    }
+  if (roll < stableChance) {
+    return "stable_signal";
   }
 
-  return "interference";
+  if (roll < stableChance + chargeChance) {
+    return "charge_signal";
+  }
+
+  if (roll < stableChance + chargeChance + interferenceChance) {
+    return "interference";
+  }
+
+  return "anomaly";
 }
 
 function randomSpeed(): number {
@@ -46,8 +48,12 @@ function randomSpeed(): number {
   return baseFallSpeed + variance;
 }
 
-export function spawnRandomObject(nowMs: number): FallingObject {
-  const kind = randomKind();
+export function spawnRandomObject(
+  nowMs: number,
+  mode: BiometricMode = "balanced",
+): FallingObject {
+  const kind = randomKind(mode);
+  const profile = getModeGameplayProfile(mode);
 
   return {
     id: `signal-${nowMs}-${Math.random().toString(36).slice(2, 8)}`,
@@ -56,6 +62,6 @@ export function spawnRandomObject(nowMs: number): FallingObject {
     y: -120,
     speed: randomSpeed(),
     spawnedAtMs: nowMs,
-    labelVisible: Math.random() > 0.35,
+    labelVisible: Math.random() >= profile.hiddenLabelChance,
   };
 }

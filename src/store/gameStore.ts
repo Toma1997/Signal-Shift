@@ -1,20 +1,33 @@
 import { create } from "zustand";
 import {
+  EVENT_COOLDOWN_MS,
   CLARITY_METER_MAX,
   CLARITY_PULSE_COST,
   CLARITY_PULSE_DURATION_MS,
   CLARITY_PULSE_SPEED_MULTIPLIER,
+  PRESSURE_CLARITY_PULSE_SPEED_MULTIPLIER,
+  PRESSURE_SPIKE_CLARITY_PULSE_SPEED_MULTIPLIER,
+  STATIC_LEAK_SCORE_PENALTY,
+  STATIC_LEAK_STABILITY_PENALTY,
   initialSpawnIntervalMs,
 } from "../game/constants";
-import {
-  applyPressureToSpawnObject,
-  getSpawnIntervalMs,
-} from "../game/difficulty";
+import { enforceSpawnFairness, getSpawnIntervalMs } from "../game/difficulty";
 import {
   advanceObjects,
   isObjectCatchable,
   isObjectMissed,
 } from "../game/engine";
+import {
+  expireTimedEvents,
+  getEventGameplayModifiers,
+  getEventLabel,
+  getStaticLeakLane,
+  maybeStartTimedEvent,
+} from "../game/events";
+import {
+  getDevGameplayOverrides,
+  installDevGameplayDebugControls,
+} from "../game/devDebug";
 import { scoreCatch, scoreMiss, shouldGameOver } from "../game/scoring";
 import { spawnRandomObject } from "../game/spawn";
 import { useSensorStore } from "./sensorStore";
@@ -45,10 +58,20 @@ function createInitialState(): GameState {
     itemsMissed: 0,
     spawnIntervalMs: initialSpawnIntervalMs,
     lastSpawnAtMs: 0,
+    biometricMode: "balanced",
+    modeReason: "default",
+    modeChangedAtMs: null,
+    activeEvents: [],
+    lastEventAtMs: null,
+    eventCooldownMs: EVENT_COOLDOWN_MS,
+    currentEventLabel: null,
     clarityMeter: 0,
     clarityPulseEndsAtMs: null,
     resultBpmHistory: [],
     resultBaselineBpm: null,
+    resultEegFocusHistory: [],
+    resultBaselineFocusScore: null,
+    resultEegChannelHistories: [[], [], [], []],
     isRunning: false,
     isGameOver: false,
   };
@@ -72,8 +95,13 @@ function buildResultsTelemetrySnapshot() {
   return {
     resultBpmHistory: [...sensorState.bpmHistory],
     resultBaselineBpm: sensorState.baselineBpm,
+    resultEegFocusHistory: [...sensorState.eegFocusHistory],
+    resultBaselineFocusScore: sensorState.calibration.baselineFocusScore,
+    resultEegChannelHistories: sensorState.eegChannelHistories.map((history) => [...history]),
   };
 }
+
+installDevGameplayDebugControls();
 
 function applyScoreDelta(
   state: GameState,
@@ -144,12 +172,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => {
       if (screen === "playing" && !state.isRunning) {
         const startedAtMs = performance.now();
+        const sensorState = useSensorStore.getState();
         return {
           ...createInitialState(),
           screen: "playing",
           startedAtMs,
           nowMs: startedAtMs,
           lastSpawnAtMs: startedAtMs,
+          biometricMode: sensorState.derivedModeState.currentMode,
+          modeReason: sensorState.derivedModeState.reason,
+          modeChangedAtMs: sensorState.derivedModeState.modeStartedAtMs,
           isRunning: true,
         };
       }
@@ -164,13 +196,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return { screen };
     }),
   startRun: (startedAtMs = performance.now()) =>
-    set({
-      ...createInitialState(),
-      screen: "playing",
-      startedAtMs,
-      nowMs: startedAtMs,
-      lastSpawnAtMs: startedAtMs,
-      isRunning: true,
+    set(() => {
+      const sensorState = useSensorStore.getState();
+
+      return {
+        ...createInitialState(),
+        screen: "playing",
+        startedAtMs,
+        nowMs: startedAtMs,
+        lastSpawnAtMs: startedAtMs,
+        biometricMode: sensorState.derivedModeState.currentMode,
+        modeReason: sensorState.derivedModeState.reason,
+        modeChangedAtMs: sensorState.derivedModeState.modeStartedAtMs,
+        isRunning: true,
+      };
     }),
   resetRun: () => set(createInitialState()),
   setPlayerLane: (lane) => set({ playerLane: lane }),
@@ -213,22 +252,41 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const dtSeconds =
         state.nowMs === 0 ? 0 : Math.min(0.04, Math.max(0, (nowMs - state.nowMs) / 1000));
       const sensorState = useSensorStore.getState();
+      const debugOverrides = getDevGameplayOverrides();
       const elapsedMs =
         state.startedAtMs == null ? 0 : Math.max(0, nowMs - state.startedAtMs);
       const clarityGainPerSecond = sensorState.clarityGainPerSecond ?? 0;
       const clarityPulseActive =
         state.clarityPulseEndsAtMs != null && nowMs < state.clarityPulseEndsAtMs;
       const clarityPulseEndsAtMs = clarityPulseActive ? state.clarityPulseEndsAtMs : null;
-      const nextSpawnIntervalMs = getSpawnIntervalMs({
+      const liveBiometricMode =
+        debugOverrides.forcedMode ?? sensorState.derivedModeState.currentMode;
+      const activeEvents = expireTimedEvents(nowMs, state);
+      const expiredEvent = state.activeEvents[0] && activeEvents.length === 0 ? state.activeEvents[0] : null;
+      if (expiredEvent) {
+        console.debug("[Signal Shift] Event ended:", getEventLabel(expiredEvent.kind));
+      }
+      const activeEvent = activeEvents[0] ?? null;
+      const eventModifiers = getEventGameplayModifiers(activeEvent);
+      const pulseSpeedMultiplier =
+        activeEvent?.kind === "pressure_spike"
+          ? PRESSURE_SPIKE_CLARITY_PULSE_SPEED_MULTIPLIER
+          : liveBiometricMode === "pressure"
+            ? PRESSURE_CLARITY_PULSE_SPEED_MULTIPLIER
+            : CLARITY_PULSE_SPEED_MULTIPLIER;
+      const baseSpawnIntervalMs = getSpawnIntervalMs({
         elapsedMs,
-        pressure: sensorState.pressureLevel,
-        signalReliable: sensorState.signalReliable,
+        mode: liveBiometricMode,
       });
+      const nextSpawnIntervalMs = Math.max(
+        420,
+        Math.round(baseSpawnIntervalMs * eventModifiers.spawnIntervalMultiplier),
+      );
       const advancedObjects =
         dtSeconds > 0
           ? advanceObjects(
               state.objects,
-              dtSeconds * (clarityPulseActive ? CLARITY_PULSE_SPEED_MULTIPLIER : 1),
+              dtSeconds * (clarityPulseActive ? pulseSpeedMultiplier : 1),
             )
           : state.objects;
       const nextSurvivedSeconds = getSurvivedSeconds(state, nowMs);
@@ -238,27 +296,53 @@ export const useGameStore = create<GameStore>((set, get) => ({
         objects: advancedObjects,
         spawnIntervalMs: nextSpawnIntervalMs,
         clarityMeter: clamp(
-          state.clarityMeter + clarityGainPerSecond * dtSeconds,
+          state.clarityMeter +
+            clarityGainPerSecond * eventModifiers.clarityGainMultiplier * dtSeconds,
           0,
           CLARITY_METER_MAX,
         ),
         clarityPulseEndsAtMs,
+        biometricMode: liveBiometricMode,
+        modeReason: sensorState.derivedModeState.reason,
+        modeChangedAtMs: sensorState.derivedModeState.modeStartedAtMs,
+        activeEvents,
+        currentEventLabel: activeEvent ? getEventLabel(activeEvent.kind) : null,
         score: {
           ...state.score,
           survivedSeconds: nextSurvivedSeconds,
         },
       };
 
+      const nextEvent = maybeStartTimedEvent(nowMs, nextState);
+      const forcedEvent = debugOverrides.forcedEvent;
+      const nextForcedOrRandomEvent = maybeStartTimedEvent(
+        nowMs,
+        nextState,
+        forcedEvent,
+      );
+      if (nextForcedOrRandomEvent) {
+        console.debug("[Signal Shift] Event started:", getEventLabel(nextForcedOrRandomEvent.kind));
+        nextState = {
+          ...nextState,
+          activeEvents: [nextForcedOrRandomEvent],
+          lastEventAtMs: nowMs,
+          currentEventLabel: getEventLabel(nextForcedOrRandomEvent.kind),
+        };
+      }
+
       if (nowMs - nextState.lastSpawnAtMs >= nextState.spawnIntervalMs) {
-        const nextObject = applyPressureToSpawnObject(
-          spawnRandomObject(nowMs),
-          sensorState.pressureLevel,
-          sensorState.signalReliable,
+        const nextObject = enforceSpawnFairness(
+          spawnRandomObject(nowMs, nextState.biometricMode),
+          nextState.objects,
+          nextState.biometricMode,
         );
+        const labelVisible = nextObject.labelVisible
+          ? Math.random() >= eventModifiers.hiddenLabelBonus
+          : false;
 
         nextState = {
           ...nextState,
-          objects: [...nextState.objects, nextObject],
+          objects: [...nextState.objects, { ...nextObject, labelVisible }],
           lastSpawnAtMs: nowMs,
         };
       }
@@ -303,10 +387,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       const sensorState = useSensorStore.getState();
-      const nextObject = applyPressureToSpawnObject(
-        spawnRandomObject(state.nowMs),
-        sensorState.pressureLevel,
-        sensorState.signalReliable,
+      const nextObject = spawnRandomObject(
+        state.nowMs,
+        sensorState.derivedModeState.currentMode,
       );
 
       return {
@@ -330,6 +413,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       const nextSurvivedSeconds = getSurvivedSeconds(state, state.nowMs);
       const delta = scoreCatch(target.kind, target.lane);
+      const activeEvent = state.activeEvents[0] ?? null;
+      const staticLeakLane = getStaticLeakLane(activeEvent);
       const nextValues = applyScoreDelta(state, delta, nextSurvivedSeconds);
       const nextState = {
         ...state,
@@ -337,6 +422,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
         objects: state.objects.filter((object) => object.id !== target.id),
         itemsCaught: state.itemsCaught + 1,
       };
+
+      if (staticLeakLane != null && state.playerLane === staticLeakLane) {
+        nextState.score.score = Math.max(
+          0,
+          nextState.score.score - STATIC_LEAK_SCORE_PENALTY,
+        );
+        if (STATIC_LEAK_STABILITY_PENALTY > 0) {
+          nextState.stability = clamp(
+            nextState.stability - STATIC_LEAK_STABILITY_PENALTY,
+            0,
+            100,
+          );
+        }
+      }
 
       if (shouldGameOver(nextState.stability, nextState.corruption)) {
         return {

@@ -10,6 +10,7 @@ export interface RawEegBandPowers {
 
 export interface EegMetricInputs {
   bandPowers: RawEegBandPowers;
+  channelLevels: number[];
   previousFocusScore: number | null;
   previousClarityCharge: number | null;
   previousClarityGainPerSecond: number | null;
@@ -50,6 +51,7 @@ function smoothValue(previous: number | null, next: number, alpha: number): numb
 
 export function deriveEegMetrics({
   bandPowers,
+  channelLevels,
   previousFocusScore,
   previousClarityCharge,
   previousClarityGainPerSecond,
@@ -87,6 +89,7 @@ export function deriveEegMetrics({
     alphaPower: bandPowers.alpha,
     betaPower: bandPowers.beta,
     thetaPower: bandPowers.theta,
+    channelLevels,
     focusScore,
     clarityCharge,
     clarityGainPerSecond,

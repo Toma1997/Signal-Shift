@@ -11,7 +11,7 @@ export function GameCanvas() {
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
+    function handleGameplayKey(event: KeyboardEvent) {
       const store = useGameStore.getState();
 
       if (event.key === "ArrowLeft") {
@@ -24,7 +24,7 @@ export function GameCanvas() {
         store.moveRight();
       }
 
-      if (event.key === " " || event.key === "Space") {
+      if (event.key === " " || event.key === "Space" || event.code === "Space") {
         event.preventDefault();
         store.resolveCatchAtPlayerLane();
       }
@@ -35,10 +35,10 @@ export function GameCanvas() {
       }
     }
 
-    window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", handleGameplayKey, true);
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", handleGameplayKey, true);
     };
   }, []);
 
@@ -57,8 +57,8 @@ export function GameCanvas() {
     let frameId = 0;
     const resizeCanvas = () => {
       const rect = panel.getBoundingClientRect();
-      const maxWidth = Math.max(260, Math.floor(rect.width - 16));
-      const maxHeight = Math.max(180, Math.floor(rect.height - 16));
+      const maxWidth = Math.max(280, Math.floor(rect.width - 6));
+      const maxHeight = Math.max(220, Math.floor(rect.height - 6));
       const aspectRatio = GAME_CANVAS_WIDTH / GAME_CANVAS_HEIGHT;
       const devicePixelRatio = window.devicePixelRatio || 1;
 
@@ -102,6 +102,7 @@ export function GameCanvas() {
     };
 
     resizeCanvas();
+    canvas.focus();
     frameId = window.requestAnimationFrame(render);
     window.addEventListener("resize", resizeCanvas);
 
@@ -118,6 +119,7 @@ export function GameCanvas() {
         width={GAME_CANVAS_WIDTH}
         height={GAME_CANVAS_HEIGHT}
         tabIndex={0}
+        onPointerDown={() => canvasRef.current?.focus()}
         aria-label="Signal Shift game canvas"
         className="game-canvas"
       />

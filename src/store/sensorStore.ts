@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { derivePressureSnapshot } from "../biometrics/fusion/derivedState";
+import {
+  deriveBiometricMode,
+  derivePressureSnapshot,
+} from "../biometrics/fusion/derivedState";
 import {
   startSyntheticEegService,
   type EegServiceController,
@@ -24,8 +27,8 @@ import {
   startWebcamStream,
   stopWebcamStream,
 } from "../biometrics/rppg/webcamService";
-import { MOCK_SENSORS } from "../game/constants";
-import type { SensorSnapshot } from "../game/types";
+import { MOCK_SENSORS, MODE_MIN_HOLD_MS } from "../game/constants";
+import type { DerivedModeState, SensorSnapshot } from "../game/types";
 
 interface CalibrationState {
   status: "idle" | "collecting" | "complete" | "error";
@@ -46,6 +49,7 @@ interface CalibrationState {
 
 interface SensorState {
   sensors: SensorSnapshot;
+  derivedModeState: DerivedModeState;
   webcam: WebcamState;
   webcamStream: MediaStream | null;
   heartReading: HeartReading | null;
@@ -59,6 +63,9 @@ interface SensorState {
   signalReliable: boolean;
   eegStatus: EegStatus;
   latestEegFrameMetadata: EegFrameMetadata | null;
+  latestEegChannelLevels: number[];
+  eegFocusHistory: number[];
+  eegChannelHistories: number[][];
   eegAlphaPower: number | null;
   eegBetaPower: number | null;
   eegThetaPower: number | null;
@@ -96,6 +103,16 @@ let calibrationTimer: number | null = null;
 const CALIBRATION_DURATION_MS = 8_000;
 const MIN_CALIBRATION_CONFIDENCE = 0.45;
 const MAX_BPM_HISTORY = 2400;
+const DEFAULT_DERIVED_MODE_STATE: DerivedModeState = {
+  currentMode: "balanced",
+  previousMode: "balanced",
+  reason: "default",
+  modeStartedAtMs: null,
+  stabilityWindowMs: MODE_MIN_HOLD_MS,
+  bpmDeltaPct: 0,
+  bpmSpike: false,
+  normalizedFocus: 0,
+};
 
 function createInitialCalibrationState(): CalibrationState {
   return {
@@ -137,6 +154,27 @@ function getDerivedPressureState(
   };
 }
 
+function getDerivedModeState(
+  bpm: number | null | undefined,
+  baselineBpm: number | null | undefined,
+  focusScore: number | null | undefined,
+  previousState: DerivedModeState | null | undefined,
+  nowMs: number,
+) {
+  const derivedModeState = deriveBiometricMode({
+    bpm,
+    baselineBpm,
+    focusScore,
+    previousState,
+    nowMs,
+  });
+
+  return {
+    derivedModeState,
+    sensorsMode: derivedModeState.currentMode,
+  };
+}
+
 function finalizeCalibration(): void {
   clearCalibrationTimer();
 
@@ -165,6 +203,23 @@ function finalizeCalibration(): void {
   }
 
   useSensorStore.setState((state) => ({
+    ...(() => {
+      const nextMode = getDerivedModeState(
+        state.heartReading?.bpm ?? state.lastLiveBpm,
+        summary.baselineBpm,
+        state.latestEegFocusScore,
+        state.derivedModeState,
+        Date.now(),
+      );
+
+      return {
+        derivedModeState: nextMode.derivedModeState,
+        sensors: {
+          ...state.sensors,
+          mode: nextMode.sensorsMode,
+        },
+      };
+    })(),
     calibration: {
       ...state.calibration,
       status: "complete",
@@ -206,6 +261,7 @@ function getCameraErrorMessage(error: unknown): string {
 
 export const useSensorStore = create<SensorState>((set) => ({
   sensors: MOCK_SENSORS,
+  derivedModeState: DEFAULT_DERIVED_MODE_STATE,
   webcam: initialWebcamState,
   webcamStream: null,
   heartReading: null,
@@ -219,6 +275,9 @@ export const useSensorStore = create<SensorState>((set) => ({
   signalReliable: false,
   eegStatus: "idle",
   latestEegFrameMetadata: null,
+  latestEegChannelLevels: [],
+  eegFocusHistory: [],
+  eegChannelHistories: [[], [], [], []],
   eegAlphaPower: null,
   eegBetaPower: null,
   eegThetaPower: null,
@@ -233,6 +292,13 @@ export const useSensorStore = create<SensorState>((set) => ({
   calibration: createInitialCalibrationState(),
   setMode: (mode) =>
     set((state) => ({
+      derivedModeState: {
+        ...state.derivedModeState,
+        previousMode: state.derivedModeState.currentMode,
+        currentMode: mode,
+        reason: "default",
+        modeStartedAtMs: Date.now(),
+      },
       sensors: {
         ...state.sensors,
         mode,
@@ -333,6 +399,11 @@ export const useSensorStore = create<SensorState>((set) => ({
       bpmDeltaPct: null,
       pressureLevel: 18,
       signalReliable: false,
+      derivedModeState: DEFAULT_DERIVED_MODE_STATE,
+      sensors: {
+        ...state.sensors,
+        mode: DEFAULT_DERIVED_MODE_STATE.currentMode,
+      },
       calibration: createInitialCalibrationState(),
     }));
   },
@@ -374,6 +445,13 @@ export const useSensorStore = create<SensorState>((set) => ({
               state.calibration.baselineBpm,
               reading.signalQuality ?? 0,
             );
+            const nextMode = getDerivedModeState(
+              nextReading?.bpm ?? state.lastLiveBpm,
+              state.calibration.baselineBpm,
+              state.latestEegFocusScore,
+              state.derivedModeState,
+              Date.now(),
+            );
 
             return {
               heartReading: nextReading,
@@ -385,11 +463,17 @@ export const useSensorStore = create<SensorState>((set) => ({
               heartConfidence: reading.confidence,
               heartSignalQuality: reading.signalQuality ?? 0,
               ...derivedPressure,
+              derivedModeState: nextMode.derivedModeState,
               rppgStatus:
                 nextReading || state.rppgStatus === "running"
                   ? "running"
                   : state.rppgStatus,
               rppgError: undefined,
+              sensors: {
+                ...state.sensors,
+                bpm: nextReading?.bpm ?? state.sensors.bpm,
+                mode: nextMode.sensorsMode,
+              },
               calibration:
                 state.calibration.status === "collecting"
                   ? {
@@ -429,6 +513,15 @@ export const useSensorStore = create<SensorState>((set) => ({
                 : diagnostics.ready || state.rppgStatus === "running"
                   ? undefined
                   : diagnostics.message,
+            sensors: {
+              ...state.sensors,
+              signalQuality:
+                diagnostics.signalQuality >= 0.66
+                  ? "high"
+                  : diagnostics.signalQuality >= 0.33
+                    ? "medium"
+                    : "low",
+            },
           }));
         },
         onError: (message) => {
@@ -466,6 +559,11 @@ export const useSensorStore = create<SensorState>((set) => ({
       bpmDeltaPct: null,
       pressureLevel: 18,
       signalReliable: false,
+      derivedModeState: DEFAULT_DERIVED_MODE_STATE,
+      sensors: {
+        ...MOCK_SENSORS,
+        mode: DEFAULT_DERIVED_MODE_STATE.currentMode,
+      },
       rppgStatus: "idle",
       rppgError: undefined,
       calibration: createInitialCalibrationState(),
@@ -479,6 +577,9 @@ export const useSensorStore = create<SensorState>((set) => ({
       eegError: undefined,
       eegEnabled: true,
       latestEegFrameMetadata: null,
+      latestEegChannelLevels: [],
+      eegFocusHistory: [],
+      eegChannelHistories: [[], [], [], []],
       eegAlphaPower: null,
       eegBetaPower: null,
       eegThetaPower: null,
@@ -516,15 +617,41 @@ export const useSensorStore = create<SensorState>((set) => ({
               validFocusScore != null
                 ? [...state.calibration.focusAcceptedReadings, validFocusScore]
                 : state.calibration.focusAcceptedReadings;
+            const nextMode = getDerivedModeState(
+              state.heartReading?.bpm ?? state.lastLiveBpm,
+              state.calibration.baselineBpm,
+              derived.focusScore,
+              state.derivedModeState,
+              Date.now(),
+            );
 
             return {
+              latestEegChannelLevels: derived.channelLevels,
               eegAlphaPower: derived.alphaPower,
               eegBetaPower: derived.betaPower,
               eegThetaPower: derived.thetaPower,
               eegSignalQuality: derived.eegSignalQuality,
               latestEegFocusScore: derived.focusScore,
+              eegFocusHistory:
+                derived.focusScore != null
+                  ? [...state.eegFocusHistory, derived.focusScore].slice(-MAX_BPM_HISTORY)
+                  : state.eegFocusHistory,
+              eegChannelHistories: state.eegChannelHistories.map((history, index) => {
+                const nextLevel = derived.channelLevels[index];
+                return nextLevel != null
+                  ? [...history, nextLevel].slice(-MAX_BPM_HISTORY)
+                  : history;
+              }),
               clarityCharge: derived.clarityCharge,
               clarityGainPerSecond: derived.clarityGainPerSecond,
+              derivedModeState: nextMode.derivedModeState,
+              sensors: {
+                ...state.sensors,
+                focus: derived.focusScore != null
+                  ? Math.round(derived.focusScore)
+                  : state.sensors.focus,
+                mode: nextMode.sensorsMode,
+              },
               calibration:
                 state.calibration.status === "collecting"
                   ? {
@@ -573,6 +700,9 @@ export const useSensorStore = create<SensorState>((set) => ({
       eegStatus: "idle",
       eegEnabled: false,
       latestEegFrameMetadata: null,
+      latestEegChannelLevels: [],
+      eegFocusHistory: [],
+      eegChannelHistories: [[], [], [], []],
       eegAlphaPower: null,
       eegBetaPower: null,
       eegThetaPower: null,
@@ -581,6 +711,11 @@ export const useSensorStore = create<SensorState>((set) => ({
       clarityCharge: null,
       clarityGainPerSecond: null,
       eegCalibrationSamplesCollected: 0,
+      derivedModeState: DEFAULT_DERIVED_MODE_STATE,
+      sensors: {
+        ...MOCK_SENSORS,
+        mode: DEFAULT_DERIVED_MODE_STATE.currentMode,
+      },
       eegError: undefined,
       calibration: createInitialCalibrationState(),
     });

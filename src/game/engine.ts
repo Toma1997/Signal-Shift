@@ -12,6 +12,9 @@ export const GAME_CANVAS_HEIGHT = 520;
 const PLAYER_WIDTH = 120;
 const PLAYER_HEIGHT = 16;
 const OBJECT_RADIUS = 18;
+const PLAYER_OFFSET_FROM_ZONE_PX = 10;
+const CATCH_GRACE_ABOVE_PX = 72;
+const CATCH_GRACE_BELOW_PX = 14;
 
 function laneWidth(width: number): number {
   return width / laneCount;
@@ -36,10 +39,13 @@ export function isObjectCatchable(
   playerLane: Lane,
   canvasHeight = GAME_CANVAS_HEIGHT,
 ): boolean {
+  const playerY =
+    canvasHeight - catchZoneHeight - PLAYER_HEIGHT - PLAYER_OFFSET_FROM_ZONE_PX;
+
   return (
     object.lane === playerLane &&
-    object.y >= canvasHeight - catchZoneHeight &&
-    object.y <= canvasHeight
+    object.y >= playerY - CATCH_GRACE_ABOVE_PX &&
+    object.y <= playerY + CATCH_GRACE_BELOW_PX
   );
 }
 
@@ -133,7 +139,8 @@ function drawPlayer(
 ): void {
   const centerX = laneCenterX(playerLane, width);
   const left = centerX - PLAYER_WIDTH / 2;
-  const playerY = height - catchZoneHeight - PLAYER_HEIGHT - 10;
+  const playerY =
+    height - catchZoneHeight - PLAYER_HEIGHT - PLAYER_OFFSET_FROM_ZONE_PX;
 
   ctx.fillStyle = "#e2e8f0";
   ctx.beginPath();

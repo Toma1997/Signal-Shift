@@ -1,59 +1,57 @@
-import { initialSpawnIntervalMs, minSpawnIntervalMs } from "./constants";
-import type { FallingObject, SignalKind } from "./types";
+import {
+  getModeGameplayProfile,
+  initialSpawnIntervalMs,
+  minSpawnIntervalMs,
+  MAX_ANOMALIES_BALANCED,
+  MAX_ANOMALIES_CALM,
+  MAX_ANOMALIES_PRESSURE,
+  SAFE_MIN_SPAWN_INTERVAL_MS,
+} from "./constants";
+import type { BiometricMode, FallingObject } from "./types";
 
 export interface SpawnPressureInputs {
   elapsedMs: number;
-  pressure?: number;
-  signalReliable?: boolean;
+  mode: BiometricMode;
 }
 
 export function getSpawnIntervalMs({
   elapsedMs,
-  pressure = 18,
-  signalReliable = false,
+  mode,
 }: SpawnPressureInputs): number {
+  const modeProfile = getModeGameplayProfile(mode);
   const elapsedReduction = Math.floor(Math.max(0, elapsedMs) / 10000) * 40;
-  const pressureReduction = signalReliable ? Math.round((pressure / 100) * 140) : 0;
-  const nextInterval = initialSpawnIntervalMs - elapsedReduction - pressureReduction;
-  return Math.max(minSpawnIntervalMs, nextInterval);
+  const baseInterval = initialSpawnIntervalMs - elapsedReduction;
+  const nextInterval = Math.round(baseInterval / modeProfile.spawnMultiplier);
+  return Math.max(Math.max(minSpawnIntervalMs, SAFE_MIN_SPAWN_INTERVAL_MS), nextInterval);
 }
 
-function chooseWeightedKind(pressure: number): SignalKind {
-  const normalizedPressure = Math.max(0, Math.min(1, pressure / 100));
-  const weights: Array<{ kind: SignalKind; weight: number }> = [
-    { kind: "stable_signal", weight: 3.2 - normalizedPressure * 0.7 },
-    { kind: "charge_signal", weight: 3.1 - normalizedPressure * 0.4 },
-    { kind: "interference", weight: 2.7 + normalizedPressure * 1.5 },
-    { kind: "anomaly", weight: 1.1 + normalizedPressure * 1.0 },
-  ];
-
-  const totalWeight = weights.reduce((sum, entry) => sum + entry.weight, 0);
-  let threshold = Math.random() * totalWeight;
-
-  for (const entry of weights) {
-    threshold -= entry.weight;
-    if (threshold <= 0) {
-      return entry.kind;
-    }
+function getAnomalyCap(mode: BiometricMode): number {
+  switch (mode) {
+    case "calm":
+      return MAX_ANOMALIES_CALM;
+    case "pressure":
+      return MAX_ANOMALIES_PRESSURE;
+    default:
+      return MAX_ANOMALIES_BALANCED;
   }
-
-  return "interference";
 }
 
-export function applyPressureToSpawnObject(
+export function enforceSpawnFairness(
   object: FallingObject,
-  pressure: number,
-  signalReliable: boolean,
+  existingObjects: FallingObject[],
+  mode: BiometricMode,
 ): FallingObject {
-  if (!signalReliable) {
+  if (object.kind !== "anomaly") {
     return object;
   }
 
-  const normalizedPressure = Math.max(0, Math.min(1, pressure / 100));
+  const anomalyCount = existingObjects.filter((entry) => entry.kind === "anomaly").length;
+  if (anomalyCount < getAnomalyCap(mode)) {
+    return object;
+  }
 
   return {
     ...object,
-    kind: chooseWeightedKind(pressure),
-    speed: object.speed + normalizedPressure * 22,
+    kind: "interference",
   };
 }
