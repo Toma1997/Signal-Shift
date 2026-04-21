@@ -1,4 +1,4 @@
-export type EegStatus = "idle" | "initializing" | "ready" | "error";
+export type EegStatus = "idle" | "initializing" | "running" | "error" | "unavailable";
 export type EegInputSource = "synthetic" | "ble";
 
 export interface SyntheticEegFrame {

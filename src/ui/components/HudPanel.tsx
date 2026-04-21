@@ -75,7 +75,7 @@ export function HudPanel({ modeIsPlaceholder = true, layout = "rail" }: HudPanel
   const clarityPulseActive = clarityPulseEndsAtMs != null;
   const clarityReady = clarityMeter >= CLARITY_PULSE_COST;
   const visibleEventLabel =
-    currentEventLabel ?? (isRunning ? "Lane scan clear" : "Awaiting run start");
+    currentEventLabel ?? (isRunning ? "Lane scan clear" : "Ready");
   const footerLayout = layout === "footer";
 
   if (footerLayout) {

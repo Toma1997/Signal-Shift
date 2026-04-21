@@ -2,6 +2,42 @@ import { useEffect, useRef } from "react";
 import { useGameStore } from "../../store/gameStore";
 import { useSensorStore } from "../../store/sensorStore";
 
+function getCameraStatusLabel(
+  webcam: ReturnType<typeof useSensorStore.getState>["webcam"],
+): string {
+  switch (webcam.status) {
+    case "requesting_permission":
+      return "requesting permission";
+    case "permission_denied":
+      return "permission denied";
+    case "unavailable":
+      return "not available";
+    case "ready":
+      return webcam.isStreaming ? "live camera OK" : "ready";
+    case "initializing":
+      return "starting";
+    case "error":
+      return "camera issue";
+    default:
+      return "waiting";
+  }
+}
+
+function getEegStatusLabel(status: ReturnType<typeof useSensorStore.getState>["eegStatus"]): string {
+  switch (status) {
+    case "running":
+      return "running";
+    case "initializing":
+      return "starting";
+    case "unavailable":
+      return "unavailable";
+    case "error":
+      return "error";
+    default:
+      return "idle";
+  }
+}
+
 export function CalibrationScreen() {
   const previewRef = useRef<HTMLVideoElement | null>(null);
   const bpmAutoStartBlockedRef = useRef(false);
@@ -77,7 +113,7 @@ export function CalibrationScreen() {
     if (
       webcam.isStreaming &&
       rppgStatus === "running" &&
-      eegStatus === "ready" &&
+      eegStatus === "running" &&
       calibration.status !== "collecting" &&
       calibration.status !== "complete" &&
       (!calibration.complete ||
@@ -100,12 +136,12 @@ export function CalibrationScreen() {
   const canStartCalibration =
     webcam.isStreaming &&
     rppgStatus === "running" &&
-    eegStatus === "ready" &&
+    eegStatus === "running" &&
     calibration.status !== "collecting";
   const canBeginRun =
     webcam.isStreaming &&
     rppgStatus === "running" &&
-    eegStatus === "ready" &&
+    eegStatus === "running" &&
     calibration.complete &&
     calibration.baselineBpm != null &&
     calibration.baselineFocusScore != null;
@@ -114,12 +150,35 @@ export function CalibrationScreen() {
   const progressPercent = Math.round(calibration.progress * 100);
   const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
 
+  const cameraGuidance =
+    webcam.status === "permission_denied"
+      ? "Camera access is blocked. Re-enable it in the browser, then retry."
+      : webcam.status === "unavailable"
+        ? "No webcam was found. Connect a camera to use live BPM."
+        : webcam.status === "requesting_permission"
+          ? "Allow camera access to continue."
+          : webcam.isStreaming
+            ? "Camera is live."
+            : "Start the camera to begin.";
+  const eegGuidance =
+    eegStatus === "running"
+      ? eegSource === "ble"
+        ? "Bluetooth EEG is live."
+        : "Synthetic EEG is running."
+      : eegStatus === "initializing"
+        ? "Starting EEG..."
+        : eegStatus === "unavailable"
+          ? "Bluetooth EEG is unavailable here. Use Synthetic EEG."
+          : eegStatus === "error"
+            ? "EEG had a problem. Retry or switch source."
+            : "Choose Synthetic EEG or connect Bluetooth EEG.";
+
   return (
     <section className="screen center-screen center-screen--fit">
       <div className="hero-card hero-card--calibration">
         <h2>Calibration</h2>
         <p className="calibration-copy">
-          Start the camera and BPM. Synthetic EEG starts here automatically, or you can switch to Bluetooth EEG.
+          Start the camera and BPM. EEG will start here too, and the baseline begins automatically once signals are live.
         </p>
 
         <div className="calibration-preview">
@@ -138,7 +197,7 @@ export function CalibrationScreen() {
 
         <div className="calibration-stats">
           <p>
-          Camera: {webcam.isStreaming ? "live" : "offline"} | BPM:{" "}
+          Camera: {getCameraStatusLabel(webcam)} | BPM:{" "}
           {displayBpm != null ? `${displayBpm.toFixed(1)} bpm` : "waiting"} | Conf:{" "}
           {(heartConfidence * 100).toFixed(0)}% | Signal: {(heartSignalQuality * 100).toFixed(0)}%
           </p>
@@ -149,7 +208,7 @@ export function CalibrationScreen() {
               : ""}
           </p>
           <p>
-            EEG: {eegSource === "ble" ? "Bluetooth" : "Synthetic"} {eegStatus} | Focus baseline:{" "}
+            EEG: {eegSource === "ble" ? "Bluetooth" : "Synthetic"} {getEegStatusLabel(eegStatus)} | Focus baseline:{" "}
             {calibration.baselineFocusScore != null
               ? `${calibration.baselineFocusScore.toFixed(1)}`
               : "waiting"}{" "}
@@ -159,7 +218,7 @@ export function CalibrationScreen() {
         </div>
         {!canBeginRun ? (
           <p className="calibration-copy">
-            Begin Run unlocks after BPM and EEG are ready and the short baseline finishes.
+            {cameraGuidance} {eegGuidance} Begin Run unlocks after the short baseline finishes.
           </p>
         ) : (
           <p className="calibration-copy">BPM and focus baselines captured. You are ready to play.</p>
@@ -185,7 +244,7 @@ export function CalibrationScreen() {
             }}
             disabled={eegStatus === "initializing" && eegSource === "synthetic"}
           >
-            {eegSource === "synthetic" && eegStatus === "ready"
+            {eegSource === "synthetic" && eegStatus === "running"
               ? "Synthetic EEG Ready"
               : "Use Synthetic EEG"}
           </button>
@@ -197,7 +256,7 @@ export function CalibrationScreen() {
             }}
             disabled={eegStatus === "initializing" && eegSource === "ble"}
           >
-            {eegSource === "ble" && eegStatus === "ready"
+            {eegSource === "ble" && eegStatus === "running"
               ? "Bluetooth EEG Ready"
               : "Connect Bluetooth EEG"}
           </button>

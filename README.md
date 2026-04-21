@@ -1,36 +1,71 @@
-# Signal-Shift
+# Signal Shift
 
-This app started from the `rppg-demo` template in
-`@elata-biosciences/create-elata-demo` and now also includes EEG integration
-inside the same browser app.
+Signal Shift is a browser-based biofeedback game prototype built with React, TypeScript, Vite, Zustand, camera rPPG, and EEG hooks. The player routes falling system traffic into the correct lanes while the game adapts pacing, pressure, and clarity systems from live or synthetic biometric signals.
 
-## What This Demo Shows
+## What The Game Is
 
-- camera-based rPPG processing in the browser
-- `createRppgSession()` as the recommended `@elata-biosciences/rppg-web` app entrypoint
-- a large BPM readout, confidence and signal-quality meters, and session chips tuned for demos
-- expandable technical diagnostics (`backendMode`, `issues`, `lastError`, and related fields)
-- `initEegWasm()` integrated into the same Vite app for synthetic EEG processing
-- `WasmCalmnessModel`, `WasmAlphaPeakModel`, and `band_powers()` rendered in the UI
-- `BleTransport` plus `AthenaWasmDecoder` for Muse-compatible EEG over Web Bluetooth
+The game is built around three routing lanes:
 
-## Requirements
+- `Stabilize` for `Stable` signals
+- `Convert` for `Charge` signals
+- `Discard` for `Interference` and `Anomaly`
 
-- a modern browser with camera access
-- permission to use the camera
-- `pnpm` or `npm` to install dependencies
+The player moves left and right, catches one object at a time, and tries to keep the reactor stable. BPM influences pressure and pace. EEG-derived focus supports clarity and recovery systems. Synthetic EEG is available for testing and demo flow when a live EEG device is not connected.
 
-## Run It
+## Controls
 
-```text
-npm:
+- `ArrowLeft` / `ArrowRight`: move between lanes
+- `Space`: catch / route one object
+- `E`: trigger Clarity Pulse when available
+
+## Sensors And Permissions
+
+- Camera access is needed for browser rPPG / live BPM
+- Synthetic EEG can run without a headset
+- Bluetooth EEG is scaffolded as an optional path where browser and device support are available
+
+Recommended browser:
+
+- Chrome or Edge on `localhost` or HTTPS for camera access
+- Web Bluetooth support is recommended for live BLE EEG workflows
+
+## Install
+
+```bash
 npm install
+```
+
+## Dev
+
+```bash
 npm run dev
 ```
 
-## Notes
+## Build
 
-- `Camera rPPG`, `Synthetic EEG`, and `EEG BLE` are exposed as separate modes in one app shell.
-- The synthetic EEG path is useful for validating the EEG integration before pairing a headset.
-- BLE mode requires Chrome or Edge with Web Bluetooth enabled on `https://` or `localhost`.
-- The rPPG path intentionally still starts from `createRppgSession()` instead of lower-level `DemoRunner` or `RppgProcessor` wiring.
+```bash
+npm run build
+```
+
+## Preview
+
+```bash
+npm run preview
+```
+
+## Build Notes
+
+- Production output is static-host friendly and builds to `dist/` with a root `index.html`
+- Asset paths use relative Vite output, so the app can be served from a normal static host or embedded in an iframe without a custom backend
+- Camera and BLE-backed features still require a supported browser context such as `localhost` or HTTPS
+
+## Quick Manual Check
+
+- Setup should move cleanly into calibration
+- Calibration should guide camera, BPM, and EEG without long technical text
+- Gameplay should fit in one fixed viewport with the camera panel and telemetry visible
+- Results should show static BPM and EEG history without scrolling
+
+## Dev Helper
+
+In development only, the game exposes a small debug helper on `window.__SIGNAL_SHIFT_DEBUG__` for forcing modes or timed events during QA.

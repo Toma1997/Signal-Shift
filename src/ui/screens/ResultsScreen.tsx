@@ -97,7 +97,7 @@ function buildHistoryChart(
 
   const sampledHistory = sampleSeries(history, 140);
   const width = 560;
-  const height = 180;
+  const height = 196;
   const plotLeft = 40;
   const plotRight = 8;
   const verticalPadding = 8;
@@ -178,6 +178,7 @@ function buildMultiSeriesChart(histories: number[][]) {
         min,
         max,
         bandTop,
+        bandBottom: bandTop + bandHeight,
         bandCenterY: bandTop + bandHeight / 2,
         ticks: buildGraphTicks(min, max).map((tick) => ({
           value: tick,
@@ -334,6 +335,16 @@ export function ResultsScreen() {
               aria-label="EEG channel values during the run"
             >
               {eegChannelsChart.series.map((series, index) => (
+                <rect
+                  key={`band-bg-${index}`}
+                  x={eegChannelsChart.plotLeft}
+                  y={series.bandTop}
+                  width={eegChannelsChart.width - eegChannelsChart.plotLeft - eegChannelsChart.plotRight}
+                  height={series.bandBottom - series.bandTop}
+                  className={`results-chart__band-bg is-ch${index + 1}`}
+                />
+              ))}
+              {eegChannelsChart.series.map((series, index) => (
                 <g key={`band-${index}`}>
                   {index > 0 ? (
                     <line
@@ -347,7 +358,7 @@ export function ResultsScreen() {
                   <text
                     x={eegChannelsChart.plotLeft - 8}
                     y={series.bandCenterY + 3}
-                    className="results-chart__tick"
+                    className={`results-chart__tick results-chart__tick--channel is-ch${index + 1}`}
                   >
                     Ch{index + 1}
                   </text>

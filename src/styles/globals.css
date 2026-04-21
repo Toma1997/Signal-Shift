@@ -329,6 +329,42 @@ button {
   font-weight: 600;
 }
 
+.results-chart__tick--channel.is-ch1 {
+  fill: #4dd0a7;
+}
+
+.results-chart__tick--channel.is-ch2 {
+  fill: #60a5fa;
+}
+
+.results-chart__tick--channel.is-ch3 {
+  fill: #fb923c;
+}
+
+.results-chart__tick--channel.is-ch4 {
+  fill: #e879f9;
+}
+
+.results-chart__band-bg {
+  fill: rgba(255, 255, 255, 0.015);
+}
+
+.results-chart__band-bg.is-ch1 {
+  fill: rgba(77, 208, 167, 0.035);
+}
+
+.results-chart__band-bg.is-ch2 {
+  fill: rgba(96, 165, 250, 0.03);
+}
+
+.results-chart__band-bg.is-ch3 {
+  fill: rgba(251, 146, 60, 0.03);
+}
+
+.results-chart__band-bg.is-ch4 {
+  fill: rgba(232, 121, 249, 0.03);
+}
+
 .results-chart__marker {
   stroke: #091018;
   stroke-width: 2;

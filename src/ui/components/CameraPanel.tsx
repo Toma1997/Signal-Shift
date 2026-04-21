@@ -62,35 +62,43 @@ export function CameraPanel({
     }
   }, [rppgStatus, showControls, startHeartRateStream, webcam.isStreaming]);
 
+  function getCameraChip(): StatusChipProps {
+    switch (webcam.status) {
+      case "requesting_permission":
+        return { label: "Requesting access", tone: "info" };
+      case "permission_denied":
+        return { label: "Permission denied", tone: "warn" };
+      case "unavailable":
+        return { label: "No webcam found", tone: "warn" };
+      case "ready":
+        return webcam.isStreaming
+          ? { label: "Camera live", tone: "good" }
+          : { label: "Camera ready", tone: "good" };
+      case "initializing":
+        return { label: "Starting camera", tone: "info" };
+      case "error":
+        return { label: "Camera issue", tone: "warn" };
+      default:
+        return { label: "Camera waiting", tone: "neutral" };
+    }
+  }
+
+  function getBpmChip(): StatusChipProps {
+    switch (rppgStatus) {
+      case "running":
+        return { label: "BPM live", tone: "good" };
+      case "initializing":
+        return { label: "BPM warmup", tone: "info" };
+      case "error":
+        return { label: "Weak / unavailable", tone: "warn" };
+      default:
+        return { label: "BPM idle", tone: "neutral" };
+    }
+  }
+
   const mergedStatusChips = useMemo(() => {
-    const dynamicChips: StatusChipProps[] = [];
-
-    if (webcam.status === "ready" && webcam.isStreaming) {
-      dynamicChips.push({ label: "Camera live", tone: "good" });
-    } else if (webcam.permissionGranted) {
-      dynamicChips.push({ label: "Camera ready", tone: "good" });
-    } else if (webcam.status === "initializing") {
-      dynamicChips.push({ label: "Starting camera", tone: "info" });
-    } else if (webcam.status === "error") {
-      dynamicChips.push({ label: "Camera error", tone: "warn" });
-    }
-
-    if (rppgStatus === "running") {
-      dynamicChips.push({ label: "BPM live", tone: "good" });
-    } else if (rppgStatus === "initializing") {
-      dynamicChips.push({ label: "BPM warmup", tone: "info" });
-    } else if (rppgStatus === "error") {
-      dynamicChips.push({ label: "BPM error", tone: "warn" });
-    }
-
-    return [...dynamicChips, ...statusChips];
-  }, [
-    rppgStatus,
-    statusChips,
-    webcam.isStreaming,
-    webcam.permissionGranted,
-    webcam.status,
-  ]);
+    return [getCameraChip(), getBpmChip(), ...statusChips];
+  }, [rppgStatus, statusChips, webcam.isStreaming, webcam.status]);
 
   const livePreview = previewContent ?? (
     <video
@@ -105,7 +113,14 @@ export function CameraPanel({
 
   const showLivePreview = webcam.isStreaming && Boolean(webcamStream);
   const effectiveLive = isLive || showLivePreview;
-  const footerLabel = rppgError ?? webcam.streamError ?? footerText;
+  const footerLabel =
+    rppgError ??
+    webcam.streamError ??
+    (webcam.status === "permission_denied"
+      ? "Allow camera access in the browser to enable live BPM."
+      : webcam.status === "unavailable"
+        ? "No webcam is available on this device."
+        : footerText);
   const displayBpm = heartReading?.bpm ?? lastLiveBpm ?? calibration.latestAcceptedBpm;
 
   return (
@@ -198,9 +213,8 @@ export function CameraPanel({
       </p>
       {footerLabel ? <p className="camera-panel__footer">{footerLabel}</p> : null}
       {isPlaceholder && !showLivePreview ? (
-        <span className="camera-panel__flag">Simulated feed</span>
+        <span className="camera-panel__flag">Camera inactive</span>
       ) : null}
-      {/* TODO(day4): replace previewContent placeholder with live webcam/video composition. */}
     </section>
   );
 }

@@ -264,6 +264,24 @@ function getCameraErrorMessage(error: unknown): string {
   return "Unable to start the camera.";
 }
 
+function getCameraErrorStatus(error: unknown): WebcamState["status"] {
+  if (error instanceof DOMException) {
+    if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+      return "permission_denied";
+    }
+
+    if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+      return "unavailable";
+    }
+  }
+
+  if (error instanceof Error && /not available in this browser/i.test(error.message)) {
+    return "unavailable";
+  }
+
+  return "error";
+}
+
 export const useSensorStore = create<SensorState>((set) => ({
   sensors: MOCK_SENSORS,
   derivedModeState: DEFAULT_DERIVED_MODE_STATE,
@@ -319,7 +337,7 @@ export const useSensorStore = create<SensorState>((set) => ({
     set((state) => ({
       webcam: {
         ...state.webcam,
-        status: "initializing",
+        status: "requesting_permission",
         streamError: undefined,
       },
     }));
@@ -342,7 +360,7 @@ export const useSensorStore = create<SensorState>((set) => ({
       set({
         webcam: {
           permissionGranted: false,
-          status: "error",
+          status: getCameraErrorStatus(error),
           isStreaming: false,
           streamError: getCameraErrorMessage(error),
         },
@@ -382,7 +400,7 @@ export const useSensorStore = create<SensorState>((set) => ({
       set({
         webcam: {
           permissionGranted: false,
-          status: "error",
+          status: getCameraErrorStatus(error),
           isStreaming: false,
           streamError: getCameraErrorMessage(error),
         },
@@ -403,7 +421,6 @@ export const useSensorStore = create<SensorState>((set) => ({
         ...state.webcam,
         status: "idle",
         isStreaming: false,
-        streamError: undefined,
       },
       webcamStream: null,
       baselineBpm: null,
@@ -456,7 +473,7 @@ export const useSensorStore = create<SensorState>((set) => ({
               state.calibration.baselineBpm,
               reading.signalQuality ?? 0,
             );
-            const nextMode = getDerivedModeState(
+          const nextMode = getDerivedModeState(
               nextReading?.bpm ?? state.lastLiveBpm,
               state.calibration.baselineBpm,
               state.latestEegFocusScore,
@@ -479,7 +496,10 @@ export const useSensorStore = create<SensorState>((set) => ({
                 nextReading || state.rppgStatus === "running"
                   ? "running"
                   : state.rppgStatus,
-              rppgError: undefined,
+              rppgError:
+                reading.signalQuality != null && reading.signalQuality < 0.2
+                  ? "Signal is weak. Keep your face steady and well lit."
+                  : undefined,
               sensors: {
                 ...state.sensors,
                 bpm: nextReading?.bpm ?? state.sensors.bpm,
@@ -522,8 +542,12 @@ export const useSensorStore = create<SensorState>((set) => ({
               !diagnostics.backendAvailable
                 ? "Elata rPPG backend is unavailable."
                 : diagnostics.ready || state.rppgStatus === "running"
-                  ? undefined
-                  : diagnostics.message,
+                  ? diagnostics.signalQuality < 0.2
+                    ? "Signal is weak. Keep your face steady and well lit."
+                    : undefined
+                  : diagnostics.message
+                    ? "Measuring BPM. Hold still for a moment."
+                    : undefined,
             sensors: {
               ...state.sensors,
               signalQuality:
@@ -690,12 +714,16 @@ export const useSensorStore = create<SensorState>((set) => ({
 
       set({
         eegEnabled: true,
-        eegStatus: "ready",
+        eegStatus: "running",
         eegError: undefined,
       });
     } catch (error) {
       set({
-        eegStatus: "error",
+        eegStatus:
+          error instanceof Error &&
+          /bluetooth|web bluetooth|not supported|not available/i.test(error.message)
+            ? "unavailable"
+            : "error",
         eegEnabled: false,
         eegError:
           error instanceof Error ? error.message : "Unable to start synthetic EEG.",
@@ -812,12 +840,16 @@ export const useSensorStore = create<SensorState>((set) => ({
 
       set({
         eegEnabled: true,
-        eegStatus: "ready",
+        eegStatus: "running",
         eegError: undefined,
       });
     } catch (error) {
       set({
-        eegStatus: "error",
+        eegStatus:
+          error instanceof Error &&
+          /bluetooth|web bluetooth|not supported|not available/i.test(error.message)
+            ? "unavailable"
+            : "error",
         eegEnabled: false,
         eegError:
           error instanceof Error ? error.message : "Unable to start Bluetooth EEG.",
@@ -861,14 +893,14 @@ export const useSensorStore = create<SensorState>((set) => ({
       !state.webcam.isStreaming ||
       state.rppgStatus !== "running" ||
       (state.heartReading == null && state.lastLiveBpm == null) ||
-      state.eegStatus !== "ready" ||
+      state.eegStatus !== "running" ||
       state.latestEegFocusScore == null
     ) {
       set({
         calibration: {
           ...createInitialCalibrationState(),
           status: "error",
-          error: "Start the camera, live BPM, and synthetic EEG before calibrating.",
+          error: "Get camera, BPM, and EEG running before starting the baseline.",
         },
       });
       return false;

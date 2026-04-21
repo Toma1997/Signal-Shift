@@ -177,7 +177,7 @@ export async function startSyntheticEegService(
 
         onFrameMetadata?.(metadata);
         onDerivedState?.(derived);
-        onStatus?.("ready");
+        onStatus?.("running");
       },
     });
 
@@ -226,7 +226,7 @@ export async function startBleEegService(
       }
 
       if (status.state === "streaming" || status.state === "connected") {
-        onStatus?.("ready");
+        onStatus?.("running");
         return;
       }
 
@@ -255,7 +255,7 @@ export async function startBleEegService(
         ),
       );
       onDerivedState?.(derived);
-      onStatus?.("ready");
+        onStatus?.("running");
     };
 
     await transport.connect();

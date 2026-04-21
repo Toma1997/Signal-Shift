@@ -1,4 +1,11 @@
-export type WebcamStatus = "idle" | "initializing" | "ready" | "error";
+export type WebcamStatus =
+  | "idle"
+  | "requesting_permission"
+  | "initializing"
+  | "ready"
+  | "permission_denied"
+  | "unavailable"
+  | "error";
 
 export interface WebcamState {
   permissionGranted: boolean;
