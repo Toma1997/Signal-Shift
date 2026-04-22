@@ -1,71 +1,120 @@
 # Signal Shift
 
-Signal Shift is a browser-based biofeedback game prototype built with React, TypeScript, Vite, Zustand, camera rPPG, and EEG hooks. The player routes falling system traffic into the correct lanes while the game adapts pacing, pressure, and clarity systems from live or synthetic biometric signals.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript)](tsconfig.json)
+[![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite)](vite.config.ts)
 
-## What The Game Is
+[Elata Biosciences](https://elata.bio) | [Elata SDK Docs](https://docs.elata.bio/sdk/overview)
 
-The game is built around three routing lanes:
+A neural arcade routing game where falling signal traffic must be directed into the correct lanes while biometrics shape the pressure. Camera heart rate tracking pushes the field harder as stress rises. EEG powers clarity gain, recovery pacing, and Clarity Pulse. Synthetic EEG keeps the experience demo-ready by default, while Bluetooth EEG can replace it when a supported device is connected.
 
-- `Stabilize` for `Stable` signals
-- `Convert` for `Charge` signals
-- `Discard` for `Interference` and `Anomaly`
+## Gameplay preview
 
-The player moves left and right, catches one object at a time, and tries to keep the reactor stable. BPM influences pressure and pace. EEG-derived focus supports clarity and recovery systems. Synthetic EEG is available for testing and demo flow when a live EEG device is not connected.
+| Desktop | Mobile |
+| --- | --- |
+| ![Signal Shift desktop gameplay preview](docs/store-assets/preview-desktop.svg) | ![Signal Shift mobile gameplay preview](docs/store-assets/preview-mobile.svg) |
 
-## Controls
+More sizes and store metadata: [`docs/store-assets/`](docs/store-assets/).
 
-- `ArrowLeft` / `ArrowRight`: move between lanes
-- `Space`: catch / route one object
-- `E`: trigger Clarity Pulse when available
+## Features
 
-## Sensors And Permissions
+- **Biometric-reactive difficulty** -- live BPM and EEG-derived state shape speed, density, clarity gain, and gameplay mode
+- **Camera heart rate (rPPG)** -- browser webcam BPM integration with live gameplay pressure effects
+- **Synthetic EEG by default** -- demo-ready EEG signal path with no hardware required
+- **Bluetooth EEG support** -- optional Elata BLE EEG path that replaces synthetic EEG when connected successfully
+- **Three-lane routing loop** -- stabilize, convert, or discard incoming traffic under pressure
+- **Clarity Pulse ability** -- EEG-driven clarity meter unlocks a short slowdown window for recovery
+- **Timed field events** -- brain fog, pressure spikes, clear windows, and static leak moments change how the run feels
+- **Post-session analytics** -- results screen captures BPM history, EEG history, routing performance, and run outcome
+- **Fixed dashboard layout** -- setup, gameplay, and results all fit inside a fixed viewport with no page scrolling
 
-- Camera access is needed for browser rPPG / live BPM
-- Synthetic EEG can run without a headset
-- Bluetooth EEG is scaffolded as an optional path where browser and device support are available
+## How It Works
 
-Recommended browser:
+1. **Setup Device** -- start the camera, warm up BPM, and auto-start synthetic EEG or connect Bluetooth EEG
+2. **Calibrate** -- the app captures a short baseline for BPM and focus before the run begins
+3. **Play** -- route Stable, Charge, Interference, and Anomaly traffic while biometrics shape difficulty
+4. **Review** -- check BPM and EEG history, routing performance, and run outcome on the results screen
 
-- Chrome or Edge on `localhost` or HTTPS for camera access
-- Web Bluetooth support is recommended for live BLE EEG workflows
+The core loop is not just about routing correctly. It is about staying composed while the game increases tempo, clutter, and pressure in response to your live state.
 
-## Install
+## Tech Stack
+
+- **React 18** + **TypeScript** (strict mode) -- UI and app logic
+- **Vite 6** -- dev server and production build
+- **Zustand** -- sensor and gameplay state management
+- **Web Audio API** -- gameplay ambience and catch feedback
+- **Elata SDK** -- `@elata-biosciences/rppg-web`, `@elata-biosciences/eeg-web`, `@elata-biosciences/eeg-web-ble`
+
+## Quick Start
 
 ```bash
 npm install
+npm run dev       # dev server on http://localhost:5173
+npm run build     # tsc + vite build -> dist/
+npm run preview   # serve production build
 ```
 
-## Dev
+## Neurotech Devices
 
-```bash
-npm run dev
+| Device | Protocol | Browser Support |
+|--------|----------|----------------|
+| Webcam (rPPG heart rate) | `getUserMedia` | All modern browsers |
+| Synthetic EEG | internal adapter | All modern browsers |
+| Bluetooth EEG headband | Web Bluetooth | Chrome, Edge, Chromium browsers |
+
+The game can run with camera + synthetic EEG by default. If Bluetooth EEG is available and connected successfully, it replaces the synthetic EEG source across Setup Device, Gameplay, and Results.
+
+## Repository Structure
+
+```text
+src/
+├── biometrics/
+│   ├── eeg/               # Synthetic EEG, BLE EEG, metrics, services
+│   ├── fusion/            # Calibration and derived biometric state
+│   └── rppg/              # Webcam and heart-rate integration
+├── game/
+│   ├── engine.ts          # Canvas render logic and catch/miss zones
+│   ├── spawn.ts           # Object generation and density tuning
+│   ├── scoring.ts         # Correct/wrong/missed routing rules
+│   ├── difficulty.ts      # Speed, spawn pacing, and mode progression
+│   ├── events.ts          # Timed gameplay events
+│   └── types.ts           # Shared game models
+├── store/
+│   ├── gameStore.ts       # Run loop, results snapshot, gameplay state
+│   └── sensorStore.ts     # Camera, BPM, EEG, calibration, source switching
+├── ui/
+│   ├── components/        # HUD, camera panel, telemetry, event toast
+│   ├── layout/            # Frame layout primitives and sizing
+│   └── screens/           # Title, Setup Device, Gameplay, Results
+└── styles/                # Global application styling
 ```
 
-## Build
+## Deployment
 
-```bash
-npm run build
-```
+The app builds to a static `dist/` output with a root `index.html`. It is static-host friendly and does not require a custom backend.
 
-## Preview
+Recommended deployment environment:
 
-```bash
-npm run preview
-```
+- static host
+- `https://` for webcam and Web Bluetooth support
+- Chromium browser for BLE EEG workflows
 
-## Build Notes
+## App Store Listing Assets
 
-- Production output is static-host friendly and builds to `dist/` with a root `index.html`
-- Asset paths use relative Vite output, so the app can be served from a normal static host or embedded in an iframe without a custom backend
-- Camera and BLE-backed features still require a supported browser context such as `localhost` or HTTPS
+Preview art and store-style assets live in [`docs/store-assets/`](docs/store-assets/).
 
-## Quick Manual Check
+## Related Projects
 
-- Setup should move cleanly into calibration
-- Calibration should guide camera, BPM, and EEG without long technical text
-- Gameplay should fit in one fixed viewport with the camera panel and telemetry visible
-- Results should show static BPM and EEG history without scrolling
+Signal Shift is inspired by the wider Elata-style neurotech game/app ecosystem:
 
-## Dev Helper
+- **[Monkey Mind: Inner Invaders](https://github.com/wkyleg/monkey-mind)** -- brain-reactive arcade design
+- **[Neuro Chess](https://github.com/wkyleg/neuro-chess)** -- strategic play with neural composure framing
+- **[NeuroFlight](https://github.com/wkyleg/neuroflight)** -- flight-sim biofeedback pressure
+- **[Breathwork Trainer](https://github.com/wkyleg/breathwork-trainer)** -- calmer biometric training loop
+- **[Reaction Trainer](https://github.com/wkyleg/reaction-trainer)** -- fast arcade performance loop with biometrics
 
-In development only, the game exposes a small debug helper on `window.__SIGNAL_SHIFT_DEBUG__` for forcing modes or timed events during QA.
+All of these projects point toward the same idea: gameplay becomes more meaningful when live body signals shape difficulty, pacing, and recovery.
+
+## License
+
+[MIT](LICENSE) -- Copyright (c) 2026 Toma Joksimovic
