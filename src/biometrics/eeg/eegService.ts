@@ -35,6 +35,7 @@ function getFrameMetadata(frame: SyntheticEegFrame, channelCount: number): EegFr
     timestampMs: frame.timestampMs,
     sampleCount: frame.samples.length,
     channelCount,
+    channelNames: Array.from({ length: channelCount }, (_, index) => `Ch${index + 1}`),
     synthetic: true,
     source: "synthetic",
   };
@@ -44,12 +45,14 @@ function getBleFrameMetadata(
   channelCount: number,
   sampleRateHz: number,
   sampleFrames: number,
+  channelNames?: string[],
 ): EegFrameMetadata {
   return {
     sampleRateHz,
     timestampMs: Date.now(),
     sampleCount: sampleFrames * channelCount,
     channelCount,
+    channelNames,
     synthetic: false,
     source: "ble",
   };
@@ -252,6 +255,7 @@ export async function startBleEegService(
           frame.eeg.channelCount,
           frame.eeg.sampleRateHz,
           sampleFrames,
+          frame.eeg.channelNames,
         ),
       );
       onDerivedState?.(derived);

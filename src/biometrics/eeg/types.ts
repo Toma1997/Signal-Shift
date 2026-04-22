@@ -1,5 +1,6 @@
 export type EegStatus = "idle" | "initializing" | "running" | "error" | "unavailable";
 export type EegInputSource = "synthetic" | "ble";
+export const EEG_CHANNEL_LABELS = ["Ch1", "Ch2", "Ch3", "Ch4"] as const;
 
 export interface SyntheticEegFrame {
   samples: Float64Array;
@@ -13,6 +14,7 @@ export interface EegFrameMetadata {
   timestampMs: number;
   sampleCount: number;
   channelCount: number;
+  channelNames?: string[];
   synthetic: boolean;
   source: EegInputSource;
 }

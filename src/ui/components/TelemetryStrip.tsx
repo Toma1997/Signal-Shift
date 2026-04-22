@@ -1,6 +1,7 @@
 import type { TelemetryMetric } from "../layout/types";
 import { useGameStore } from "../../store/gameStore";
 import { useSensorStore } from "../../store/sensorStore";
+import { EEG_CHANNEL_LABELS } from "../../biometrics/eeg/types";
 
 export interface TelemetryStripProps {
   metrics: TelemetryMetric[];
@@ -97,6 +98,7 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
   const lastLiveBpm = useSensorStore((state) => state.lastLiveBpm);
   const bpmHistory = useSensorStore((state) => state.bpmHistory);
   const eegFocusHistory = useSensorStore((state) => state.eegFocusHistory);
+  const latestEegFrameMetadata = useSensorStore((state) => state.latestEegFrameMetadata);
   const latestEegChannelLevels = useSensorStore((state) => state.latestEegChannelLevels);
   const eegChannelHistories = useSensorStore((state) => state.eegChannelHistories);
   const heartSignalQuality = useSensorStore((state) => state.heartSignalQuality);
@@ -174,6 +176,10 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
       : "",
   );
   const eegStrokeColors = ["#4dd0a7", "#60a5fa", "#fb923c", "#e879f9"];
+  const eegChannelLabels = EEG_CHANNEL_LABELS.map(
+    (fallback, index) => latestEegFrameMetadata?.channelNames?.[index] ?? fallback,
+  );
+  const eegSourceLabel = latestEegFrameMetadata?.source === "ble" ? "Bluetooth" : "Synthetic";
 
   const resolvedMetrics = metrics.map((metric) => {
     if (metric.id === "bpm") {
@@ -312,20 +318,23 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
                     Baseline {calibration.baselineFocusScore.toFixed(1)}
                   </span>
                 ) : null}
+                <span className="telemetry-strip__subvalue telemetry-strip__subvalue--neutral">
+                  EEG Source {eegSourceLabel}
+                </span>
                 <span className="telemetry-strip__channel-row">
                   <span className="telemetry-strip__channel-value is-ch1">
-                    Ch1 {latestEegChannelLevels[0]?.toFixed(1) ?? "--"}
+                    {eegChannelLabels[0]} {latestEegChannelLevels[0]?.toFixed(1) ?? "--"}
                   </span>
                   <span className="telemetry-strip__channel-value is-ch2">
-                    Ch2 {latestEegChannelLevels[1]?.toFixed(1) ?? "--"}
+                    {eegChannelLabels[1]} {latestEegChannelLevels[1]?.toFixed(1) ?? "--"}
                   </span>
                 </span>
                 <span className="telemetry-strip__channel-row">
                   <span className="telemetry-strip__channel-value is-ch3">
-                    Ch3 {latestEegChannelLevels[2]?.toFixed(1) ?? "--"}
+                    {eegChannelLabels[2]} {latestEegChannelLevels[2]?.toFixed(1) ?? "--"}
                   </span>
                   <span className="telemetry-strip__channel-value is-ch4">
-                    Ch4 {latestEegChannelLevels[3]?.toFixed(1) ?? "--"}
+                    {eegChannelLabels[3]} {latestEegChannelLevels[3]?.toFixed(1) ?? "--"}
                   </span>
                 </span>
                 <span className="telemetry-strip__subvalue telemetry-strip__subvalue--neutral">
@@ -335,10 +344,10 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
               {eegSparklinePaths.some(Boolean) ? (
                 <div className="telemetry-strip__sparkline-shell">
                   <div className="telemetry-strip__sparkline-scale telemetry-strip__sparkline-scale--bands" aria-hidden="true">
-                    <span className="telemetry-strip__band-label is-ch1">Ch1</span>
-                    <span className="telemetry-strip__band-label is-ch2">Ch2</span>
-                    <span className="telemetry-strip__band-label is-ch3">Ch3</span>
-                    <span className="telemetry-strip__band-label is-ch4">Ch4</span>
+                    <span className="telemetry-strip__band-label is-ch1">{eegChannelLabels[0]}</span>
+                    <span className="telemetry-strip__band-label is-ch2">{eegChannelLabels[1]}</span>
+                    <span className="telemetry-strip__band-label is-ch3">{eegChannelLabels[2]}</span>
+                    <span className="telemetry-strip__band-label is-ch4">{eegChannelLabels[3]}</span>
                   </div>
                   <svg
                     viewBox={`0 0 ${eegGraphWidth} ${height}`}

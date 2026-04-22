@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { useGameStore } from "../../store/gameStore";
+import { EEG_CHANNEL_LABELS } from "../../biometrics/eeg/types";
+import { useSensorStore } from "../../store/sensorStore";
 
 function buildSparklinePath(
   values: number[],
@@ -224,6 +226,7 @@ export function ResultsScreen() {
   const eegFocusHistory = useGameStore((state) => state.resultEegFocusHistory);
   const baselineFocusScore = useGameStore((state) => state.resultBaselineFocusScore);
   const eegChannelHistories = useGameStore((state) => state.resultEegChannelHistories);
+  const latestEegFrameMetadata = useSensorStore((state) => state.latestEegFrameMetadata);
   const bpmChart = useMemo(() => buildHistoryChart(bpmHistory, baselineBpm), [baselineBpm, bpmHistory]);
   const eegChart = useMemo(
     () => buildHistoryChart(eegFocusHistory, baselineFocusScore),
@@ -234,6 +237,10 @@ export function ResultsScreen() {
     [eegChannelHistories],
   );
   const eegStrokeColors = ["#4dd0a7", "#60a5fa", "#fb923c", "#e879f9"];
+  const eegChannelLabels = EEG_CHANNEL_LABELS.map(
+    (fallback, index) => latestEegFrameMetadata?.channelNames?.[index] ?? fallback,
+  );
+  const eegSourceLabel = latestEegFrameMetadata?.source === "ble" ? "Bluetooth" : "Synthetic";
 
   return (
     <section className="screen center-screen center-screen--fit">
@@ -246,6 +253,7 @@ export function ResultsScreen() {
           <p>Missed: {score.missed}</p>
           <p>Time: {score.survivedSeconds}s</p>
           {baselineFocusScore != null ? <p>Baseline Focus: {baselineFocusScore.toFixed(1)}</p> : null}
+          <p>EEG Source: {eegSourceLabel}</p>
         </div>
         {bpmChart ? (
           <div className="results-chart">
@@ -326,10 +334,10 @@ export function ResultsScreen() {
             <div className="results-chart__head">
               <span className="hud-panel__badge-label">Run EEG Channel Trend</span>
               <span className="hud-bpm-chart__legend">
-                <span className="hud-bpm-chart__legend-item" style={{ color: eegStrokeColors[0] }}>Ch1</span>
-                <span className="hud-bpm-chart__legend-item" style={{ color: eegStrokeColors[1] }}>Ch2</span>
-                <span className="hud-bpm-chart__legend-item" style={{ color: eegStrokeColors[2] }}>Ch3</span>
-                <span className="hud-bpm-chart__legend-item" style={{ color: eegStrokeColors[3] }}>Ch4</span>
+                <span className="hud-bpm-chart__legend-item" style={{ color: eegStrokeColors[0] }}>{eegChannelLabels[0]}</span>
+                <span className="hud-bpm-chart__legend-item" style={{ color: eegStrokeColors[1] }}>{eegChannelLabels[1]}</span>
+                <span className="hud-bpm-chart__legend-item" style={{ color: eegStrokeColors[2] }}>{eegChannelLabels[2]}</span>
+                <span className="hud-bpm-chart__legend-item" style={{ color: eegStrokeColors[3] }}>{eegChannelLabels[3]}</span>
               </span>
             </div>
             <div className="results-chart__summary">
@@ -341,7 +349,8 @@ export function ResultsScreen() {
               ) : null}
               {eegChannelsChart.series.map((series, index) => (
                 <span key={`ch-${index + 1}`}>
-                  Ch{index + 1} {series.endValue != null ? series.endValue.toFixed(1) : "--"}
+                  {eegChannelLabels[index] ?? `Channel ${index + 1}`}{" "}
+                  {series.endValue != null ? series.endValue.toFixed(1) : "--"}
                 </span>
               ))}
             </div>
@@ -377,7 +386,7 @@ export function ResultsScreen() {
                     y={series.bandCenterY + 3}
                     className={`results-chart__tick results-chart__tick--channel is-ch${index + 1}`}
                   >
-                    Ch{index + 1}
+                    {eegChannelLabels[index] ?? `Channel ${index + 1}`}
                   </text>
                   <line
                     x1={eegChannelsChart.plotLeft}
@@ -427,13 +436,17 @@ export function ResultsScreen() {
               <span>
                 Start
                 {eegChannelsChart.series.map((series, index) =>
-                  ` · Ch${index + 1} ${series.startValue != null ? series.startValue.toFixed(1) : "--"}`,
+                  ` · ${eegChannelLabels[index] ?? `Channel ${index + 1}`} ${
+                    series.startValue != null ? series.startValue.toFixed(1) : "--"
+                  }`,
                 )}
               </span>
               <span>
                 End
                 {eegChannelsChart.series.map((series, index) =>
-                  ` · Ch${index + 1} ${series.endValue != null ? series.endValue.toFixed(1) : "--"}`,
+                  ` · ${eegChannelLabels[index] ?? `Channel ${index + 1}`} ${
+                    series.endValue != null ? series.endValue.toFixed(1) : "--"
+                  }`,
                 )}
               </span>
             </div>
