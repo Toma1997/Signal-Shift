@@ -30,6 +30,10 @@ export const initialSpawnIntervalMs = 900;
 export const minSpawnIntervalMs = 420;
 export const baseFallSpeed = 180;
 export const speedVariance = 40;
+export const SPAWN_ACCELERATION_STEP_MS = 7_000;
+export const INITIAL_CORRECT_LANE_CHANCE = 0.58;
+export const LATE_GAME_RAMP_START_MS = 45_000;
+export const LATE_GAME_RAMP_FULL_MS = 60_000;
 export const catchZoneHeight = 90;
 export const CLARITY_METER_MAX = 100;
 export const CLARITY_PULSE_COST = 100;
@@ -65,6 +69,21 @@ export interface ModeGameplayProfile {
   interferenceChance: number;
   hiddenLabelChance: number;
   scoreMultiplier: number;
+  spawnAccelerationPerStepMs: number;
+  maxTimeSpawnReductionMs: number;
+  correctLaneMaxChance: number;
+  correctLaneRampDurationMs: number;
+  timeSpeedBonusPerMinute: number;
+  maxTimeSpeedBonus: number;
+  lateGameSpawnReductionBonusMs: number;
+  lateGameCorrectLaneBonus: number;
+  lateGameSpeedBonus: number;
+  fieldSpeedGainPerMinute: number;
+  maxFieldSpeedBonus: number;
+  clutterChanceMax: number;
+  clutterRampDurationMs: number;
+  maxSpawnBurstCount: number;
+  secondaryClutterChanceMax: number;
 }
 
 const MODE_GAMEPLAY_PROFILES: Record<BiometricMode, ModeGameplayProfile> = {
@@ -74,6 +93,21 @@ const MODE_GAMEPLAY_PROFILES: Record<BiometricMode, ModeGameplayProfile> = {
     interferenceChance: 0.22,
     hiddenLabelChance: 0.08,
     scoreMultiplier: 1,
+    spawnAccelerationPerStepMs: 62,
+    maxTimeSpawnReductionMs: 390,
+    correctLaneMaxChance: 0.84,
+    correctLaneRampDurationMs: 75_000,
+    timeSpeedBonusPerMinute: 22,
+    maxTimeSpeedBonus: 48,
+    lateGameSpawnReductionBonusMs: 36,
+    lateGameCorrectLaneBonus: 0.03,
+    lateGameSpeedBonus: 6,
+    fieldSpeedGainPerMinute: 0.08,
+    maxFieldSpeedBonus: 0.28,
+    clutterChanceMax: 0.42,
+    clutterRampDurationMs: 70_000,
+    maxSpawnBurstCount: 4,
+    secondaryClutterChanceMax: 0.12,
   },
   calm: {
     spawnMultiplier: 0.88,
@@ -81,6 +115,21 @@ const MODE_GAMEPLAY_PROFILES: Record<BiometricMode, ModeGameplayProfile> = {
     interferenceChance: 0.2,
     hiddenLabelChance: 0.22,
     scoreMultiplier: 1,
+    spawnAccelerationPerStepMs: 44,
+    maxTimeSpawnReductionMs: 250,
+    correctLaneMaxChance: 0.8,
+    correctLaneRampDurationMs: 95_000,
+    timeSpeedBonusPerMinute: 14,
+    maxTimeSpeedBonus: 28,
+    lateGameSpawnReductionBonusMs: 18,
+    lateGameCorrectLaneBonus: 0.02,
+    lateGameSpeedBonus: 3,
+    fieldSpeedGainPerMinute: 0.05,
+    maxFieldSpeedBonus: 0.16,
+    clutterChanceMax: 0.28,
+    clutterRampDurationMs: 85_000,
+    maxSpawnBurstCount: 3,
+    secondaryClutterChanceMax: 0.06,
   },
   pressure: {
     spawnMultiplier: 1.18,
@@ -88,6 +137,21 @@ const MODE_GAMEPLAY_PROFILES: Record<BiometricMode, ModeGameplayProfile> = {
     interferenceChance: 0.3,
     hiddenLabelChance: 0.1,
     scoreMultiplier: 1.1,
+    spawnAccelerationPerStepMs: 78,
+    maxTimeSpawnReductionMs: 460,
+    correctLaneMaxChance: 0.88,
+    correctLaneRampDurationMs: 60_000,
+    timeSpeedBonusPerMinute: 30,
+    maxTimeSpeedBonus: 60,
+    lateGameSpawnReductionBonusMs: 58,
+    lateGameCorrectLaneBonus: 0.05,
+    lateGameSpeedBonus: 10,
+    fieldSpeedGainPerMinute: 0.12,
+    maxFieldSpeedBonus: 0.4,
+    clutterChanceMax: 0.62,
+    clutterRampDurationMs: 42_000,
+    maxSpawnBurstCount: 5,
+    secondaryClutterChanceMax: 0.2,
   },
 };
 

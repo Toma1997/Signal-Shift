@@ -75,6 +75,23 @@ function sampleSeries(values: number[], maxPoints: number): number[] {
   return sampled;
 }
 
+function smoothSeries(values: number[], alpha = 0.26): number[] {
+  if (values.length < 2) {
+    return values;
+  }
+
+  let previous = values[0] ?? 0;
+
+  return values.map((value, index) => {
+    if (index === 0) {
+      return value;
+    }
+
+    previous = previous + (value - previous) * alpha;
+    return Number(previous.toFixed(3));
+  });
+}
+
 export function TelemetryStrip({ metrics }: TelemetryStripProps) {
   const heartReading = useSensorStore((state) => state.heartReading);
   const lastLiveBpm = useSensorStore((state) => state.lastLiveBpm);
@@ -107,8 +124,9 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
     : displayBpm != null
       ? [displayBpm]
       : [];
-  const bpmSparkline = sparklineSeries.length
-    ? buildSparklinePath(sparklineSeries, bpmGraphWidth, height)
+  const bpmSparklineSeries = smoothSeries(sparklineSeries, 0.35);
+  const bpmSparkline = bpmSparklineSeries.length
+    ? buildSparklinePath(bpmSparklineSeries, bpmGraphWidth, height)
     : "";
   const paddedSeries =
     calibration.baselineBpm != null ? [...sparklineSeries, calibration.baselineBpm] : sparklineSeries;
@@ -144,7 +162,7 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
   const eegSeriesCollection = eegChannelHistories.map((history, index) => {
     const sampled = sampleSeries(history, 64);
     if (sampled.length) {
-      return sampled;
+      return smoothSeries(sampled, 0.22);
     }
     const fallback = latestEegChannelLevels[index];
     return fallback != null ? [fallback] : [];
@@ -245,7 +263,7 @@ export function TelemetryStrip({ metrics }: TelemetryStripProps) {
                 </span>
               </div>
               {bpmSparkline ? (
-                <div className="telemetry-strip__sparkline-shell telemetry-strip__sparkline-shell--eeg">
+                <div className="telemetry-strip__sparkline-shell">
                   <div className="telemetry-strip__sparkline-scale" aria-hidden="true">
                     {tickPositions.map((tick) => (
                       <span key={tick.value}>{Math.round(tick.value)}</span>

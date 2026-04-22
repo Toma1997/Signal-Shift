@@ -24,13 +24,18 @@ function createSyntheticFrame(
 
     for (let channelIndex = 0; channelIndex < channelCount; channelIndex += 1) {
       const offset = sampleIndex * channelCount + channelIndex;
+      const envelope =
+        1 +
+        Math.sin(2 * Math.PI * 0.045 * t + channelIndex * 0.3) * 0.14 +
+        Math.sin(2 * Math.PI * 0.018 * t + channelIndex * 0.55) * 0.08;
       const carrier =
-        Math.sin(2 * Math.PI * (8 + channelIndex * 0.6) * t) * 18 +
-        Math.sin(2 * Math.PI * (12 + channelIndex * 0.4) * t) * 9;
+        Math.sin(2 * Math.PI * (8 + channelIndex * 0.22) * t) * 8.5 * envelope +
+        Math.sin(2 * Math.PI * (10.5 + channelIndex * 0.18) * t) * 3.4 * envelope;
       const beta =
-        Math.sin(2 * Math.PI * (18 + channelIndex * 0.8) * t) * 5;
+        Math.sin(2 * Math.PI * (15 + channelIndex * 0.25) * t) * 1.8;
       const drift =
-        Math.sin(2 * Math.PI * 0.2 * t + channelIndex * 0.45) * 3;
+        Math.sin(2 * Math.PI * 0.1 * t + channelIndex * 0.45) * 1.4 +
+        Math.sin(2 * Math.PI * 0.035 * t + channelIndex * 0.7) * 0.8;
 
       samples[offset] = carrier + beta + drift;
     }

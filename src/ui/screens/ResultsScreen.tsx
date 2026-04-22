@@ -87,6 +87,23 @@ function sampleSeries(values: number[], maxPoints: number): number[] {
   return sampled;
 }
 
+function smoothSeries(values: number[], alpha = 0.26): number[] {
+  if (values.length < 2) {
+    return values;
+  }
+
+  let previous = values[0] ?? 0;
+
+  return values.map((value, index) => {
+    if (index === 0) {
+      return value;
+    }
+
+    previous = previous + (value - previous) * alpha;
+    return Number(previous.toFixed(3));
+  });
+}
+
 function buildHistoryChart(
   history: number[],
   baseline: number | null,
@@ -95,7 +112,7 @@ function buildHistoryChart(
     return null;
   }
 
-  const sampledHistory = sampleSeries(history, 140);
+  const sampledHistory = smoothSeries(sampleSeries(history, 140), 0.34);
   const width = 560;
   const height = 196;
   const plotLeft = 40;
@@ -144,7 +161,7 @@ function buildHistoryChart(
 }
 
 function buildMultiSeriesChart(histories: number[][]) {
-  const sampledHistories = histories.map((history) => sampleSeries(history, 140));
+  const sampledHistories = histories.map((history) => smoothSeries(sampleSeries(history, 140), 0.22));
   const hasValues = sampledHistories.some((history) => history.length > 0);
 
   if (!hasValues) {
@@ -436,7 +453,7 @@ export function ResultsScreen() {
             className="primary-btn"
             onClick={() => {
               resetRun();
-              setScreen("setup");
+              setScreen("calibration");
             }}
           >
             Restart

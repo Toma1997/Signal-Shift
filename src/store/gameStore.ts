@@ -5,13 +5,18 @@ import {
   CLARITY_PULSE_COST,
   CLARITY_PULSE_DURATION_MS,
   CLARITY_PULSE_SPEED_MULTIPLIER,
+  getModeGameplayProfile,
   PRESSURE_CLARITY_PULSE_SPEED_MULTIPLIER,
   PRESSURE_SPIKE_CLARITY_PULSE_SPEED_MULTIPLIER,
   STATIC_LEAK_SCORE_PENALTY,
   STATIC_LEAK_STABILITY_PENALTY,
   initialSpawnIntervalMs,
 } from "../game/constants";
-import { enforceSpawnFairness, getSpawnIntervalMs } from "../game/difficulty";
+import {
+  enforceSpawnFairness,
+  getFieldSpeedMultiplier,
+  getSpawnIntervalMs,
+} from "../game/difficulty";
 import {
   advanceObjects,
   isObjectCatchable,
@@ -29,7 +34,11 @@ import {
   installDevGameplayDebugControls,
 } from "../game/devDebug";
 import { scoreCatch, scoreMiss, shouldGameOver } from "../game/scoring";
-import { spawnRandomObject } from "../game/spawn";
+import {
+  shouldSpawnSecondWrongLaneCompanion,
+  spawnRandomObject,
+  spawnWrongLaneCompanion,
+} from "../game/spawn";
 import { useSensorStore } from "./sensorStore";
 import type { FallingObject, GameState, Lane, Screen } from "../game/types";
 import { GAME_CANVAS_HEIGHT } from "../game/engine";
@@ -285,6 +294,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         elapsedMs,
         mode: liveBiometricMode,
       });
+      const fieldSpeedMultiplier = getFieldSpeedMultiplier(elapsedMs, liveBiometricMode);
       const nextSpawnIntervalMs = Math.max(
         420,
         Math.round(baseSpawnIntervalMs * eventModifiers.spawnIntervalMultiplier),
@@ -293,7 +303,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         dtSeconds > 0
           ? advanceObjects(
               state.objects,
-              dtSeconds * (clarityPulseActive ? pulseSpeedMultiplier : 1),
+              dtSeconds *
+                fieldSpeedMultiplier *
+                (clarityPulseActive ? pulseSpeedMultiplier : 1),
             )
           : state.objects;
       const nextSurvivedSeconds = getSurvivedSeconds(state, nowMs);
@@ -337,19 +349,81 @@ export const useGameStore = create<GameStore>((set, get) => ({
         };
       }
 
-      if (nowMs - nextState.lastSpawnAtMs >= nextState.spawnIntervalMs) {
-        const nextObject = enforceSpawnFairness(
-          spawnRandomObject(nowMs, nextState.biometricMode),
-          nextState.objects,
-          nextState.biometricMode,
+      const elapsedSinceSpawn = nowMs - nextState.lastSpawnAtMs;
+      if (elapsedSinceSpawn >= nextState.spawnIntervalMs) {
+        const modeProfile = getModeGameplayProfile(nextState.biometricMode);
+        const spawnCount = Math.min(
+          modeProfile.maxSpawnBurstCount,
+          Math.max(1, Math.floor(elapsedSinceSpawn / nextState.spawnIntervalMs)),
         );
-        const labelVisible = nextObject.labelVisible
-          ? Math.random() >= eventModifiers.hiddenLabelBonus
-          : false;
+        let spawnedObjects = [...nextState.objects];
+
+        for (let spawnIndex = 0; spawnIndex < spawnCount; spawnIndex += 1) {
+          const spawnTime = nowMs - (spawnCount - 1 - spawnIndex) * nextState.spawnIntervalMs;
+          const primaryObject = enforceSpawnFairness(
+            spawnRandomObject(spawnTime, nextState.biometricMode, elapsedMs),
+            spawnedObjects,
+            nextState.biometricMode,
+          );
+          const primaryLabelVisible = primaryObject.labelVisible
+            ? Math.random() >= eventModifiers.hiddenLabelBonus
+            : false;
+
+          spawnedObjects.push({
+            ...primaryObject,
+            labelVisible: primaryLabelVisible,
+          });
+
+          const clutterObject = spawnWrongLaneCompanion(
+            spawnTime,
+            nextState.biometricMode,
+            elapsedMs,
+          );
+
+          if (clutterObject) {
+            const fairClutterObject = enforceSpawnFairness(
+              clutterObject,
+              spawnedObjects,
+              nextState.biometricMode,
+            );
+            const clutterLabelVisible = fairClutterObject.labelVisible
+              ? Math.random() >= eventModifiers.hiddenLabelBonus
+              : false;
+
+            spawnedObjects.push({
+              ...fairClutterObject,
+              labelVisible: clutterLabelVisible,
+            });
+          }
+
+          if (shouldSpawnSecondWrongLaneCompanion(elapsedMs, nextState.biometricMode)) {
+            const secondClutterObject = spawnWrongLaneCompanion(
+              spawnTime + 1,
+              nextState.biometricMode,
+              elapsedMs,
+            );
+
+            if (secondClutterObject) {
+              const fairSecondClutterObject = enforceSpawnFairness(
+                secondClutterObject,
+                spawnedObjects,
+                nextState.biometricMode,
+              );
+              const secondClutterLabelVisible = fairSecondClutterObject.labelVisible
+                ? Math.random() >= eventModifiers.hiddenLabelBonus
+                : false;
+
+              spawnedObjects.push({
+                ...fairSecondClutterObject,
+                labelVisible: secondClutterLabelVisible,
+              });
+            }
+          }
+        }
 
         nextState = {
           ...nextState,
-          objects: [...nextState.objects, { ...nextObject, labelVisible }],
+          objects: spawnedObjects,
           lastSpawnAtMs: nowMs,
         };
       }
@@ -394,9 +468,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       const sensorState = useSensorStore.getState();
+      const elapsedMs =
+        state.startedAtMs == null ? 0 : Math.max(0, state.nowMs - state.startedAtMs);
       const nextObject = spawnRandomObject(
         state.nowMs,
         sensorState.derivedModeState.currentMode,
+        elapsedMs,
       );
 
       return {

@@ -13,7 +13,7 @@ export function TitleScreen() {
         <h1>{APP_NAME}</h1>
         <p>A biometric arcade game where signal state changes the feel of play.</p>
         <div className="button-row">
-          <button className="primary-btn" onClick={() => setScreen("setup")}>
+          <button className="primary-btn" onClick={() => setScreen("calibration")}>
             Start
           </button>
           <button className="secondary-btn" onClick={() => setShowInstructions(true)}>
@@ -30,8 +30,11 @@ export function TitleScreen() {
             <p>`Stable Signal` goes to `Stabilize`.</p>
             <p>`Charge Signal` goes to `Convert`.</p>
             <p>`Interference` and `Anomaly` go to `Discard`.</p>
-            <p>Use `Left` and `Right` to move lanes. Press `Space` to catch in the active lane.</p>
-            <p>Before the run, turn on the camera and BPM feed so gameplay can react to your live pressure signal.</p>
+            <p>Use `Left` and `Right` to move lanes. Press `Space` once to catch one object in the active lane.</p>
+            <p>Correct routing keeps the reactor stable. Missed correct objects and wrong-lane catches damage the run.</p>
+            <p>`E` triggers Clarity Pulse when the clarity meter is full, briefly slowing the field.</p>
+            <p>Live camera BPM shapes pressure and pace. Synthetic EEG shapes clarity and recovery.</p>
+            <p>After pressing `Start`, go through `Setup Device`, allow camera access, and wait for the short baseline to finish.</p>
             <div className="button-row">
               <button className="primary-btn" onClick={() => setShowInstructions(false)}>
                 Close

@@ -57,14 +57,11 @@ export function CalibrationScreen() {
   const latestEegFocusScore = useSensorStore((state) => state.latestEegFocusScore);
   const eegSignalQuality = useSensorStore((state) => state.eegSignalQuality);
   const eegError = useSensorStore((state) => state.eegError);
-  const requestCameraPermission = useSensorStore((state) => state.requestCameraPermission);
   const startCameraStream = useSensorStore((state) => state.startCameraStream);
   const stopCameraStream = useSensorStore((state) => state.stopCameraStream);
   const startHeartRateStream = useSensorStore((state) => state.startHeartRateStream);
-  const stopHeartRateStream = useSensorStore((state) => state.stopHeartRateStream);
   const startSyntheticEeg = useSensorStore((state) => state.startSyntheticEeg);
   const startBleEeg = useSensorStore((state) => state.startBleEeg);
-  const stopSyntheticEeg = useSensorStore((state) => state.stopSyntheticEeg);
   const setEegSource = useSensorStore((state) => state.setEegSource);
   const startCalibration = useSensorStore((state) => state.startCalibration);
   const cancelCalibration = useSensorStore((state) => state.cancelCalibration);
@@ -152,33 +149,33 @@ export function CalibrationScreen() {
 
   const cameraGuidance =
     webcam.status === "permission_denied"
-      ? "Camera access is blocked. Re-enable it in the browser, then retry."
+      ? "Camera access is blocked. Re-enable it in the browser, then start camera again."
       : webcam.status === "unavailable"
         ? "No webcam was found. Connect a camera to use live BPM."
         : webcam.status === "requesting_permission"
-          ? "Allow camera access to continue."
+          ? "Allow camera access to start rPPG."
           : webcam.isStreaming
-            ? "Camera is live."
-            : "Start the camera to begin.";
+            ? "Camera and BPM are preparing."
+            : "Start camera to begin.";
   const eegGuidance =
     eegStatus === "running"
       ? eegSource === "ble"
         ? "Bluetooth EEG is live."
-        : "Synthetic EEG is running."
+        : "Synthetic EEG is running automatically."
       : eegStatus === "initializing"
         ? "Starting EEG..."
         : eegStatus === "unavailable"
           ? "Bluetooth EEG is unavailable here. Use Synthetic EEG."
           : eegStatus === "error"
             ? "EEG had a problem. Retry or switch source."
-            : "Choose Synthetic EEG or connect Bluetooth EEG.";
+            : "Synthetic EEG starts automatically here. Bluetooth EEG is optional.";
 
   return (
     <section className="screen center-screen center-screen--fit">
       <div className="hero-card hero-card--calibration">
-        <h2>Calibration</h2>
+        <h2>Setup Device</h2>
         <p className="calibration-copy">
-          Start the camera and BPM. EEG will start here too, and the baseline begins automatically once signals are live.
+          Start the camera once. BPM and synthetic EEG will begin automatically, then the short baseline will capture on its own.
         </p>
 
         <div className="calibration-preview">
@@ -239,18 +236,6 @@ export function CalibrationScreen() {
           <button
             className="secondary-btn"
             onClick={() => {
-              setEegSource("synthetic");
-              void startSyntheticEeg();
-            }}
-            disabled={eegStatus === "initializing" && eegSource === "synthetic"}
-          >
-            {eegSource === "synthetic" && eegStatus === "running"
-              ? "Synthetic EEG Ready"
-              : "Use Synthetic EEG"}
-          </button>
-          <button
-            className="secondary-btn"
-            onClick={() => {
               setEegSource("ble");
               void startBleEeg();
             }}
@@ -260,27 +245,8 @@ export function CalibrationScreen() {
               ? "Bluetooth EEG Ready"
               : "Connect Bluetooth EEG"}
           </button>
-          <button
-            className="secondary-btn"
-            onClick={() => {
-              void stopSyntheticEeg();
-            }}
-            disabled={eegStatus === "idle"}
-          >
-            Stop EEG
-          </button>
         </div>
         <div className="button-row calibration-button-row">
-          {!webcam.permissionGranted && !webcam.isStreaming ? (
-            <button
-              className="secondary-btn"
-              onClick={() => {
-                void requestCameraPermission();
-              }}
-            >
-              Request Access
-            </button>
-          ) : null}
           <button
             className="secondary-btn"
             onClick={() => {
@@ -289,32 +255,12 @@ export function CalibrationScreen() {
             }}
             disabled={webcam.status === "initializing"}
           >
-            {webcam.isStreaming ? "Restart Camera" : "Start Camera"}
-          </button>
-          <button
-            className="secondary-btn"
-            onClick={() => {
-              bpmAutoStartBlockedRef.current = false;
-              void startHeartRateStream();
-            }}
-            disabled={!webcam.isStreaming || rppgStatus === "initializing" || rppgStatus === "running"}
-          >
-            {rppgStatus === "running" ? "Restart BPM" : "Start BPM"}
-          </button>
-          <button
-            className="secondary-btn"
-            onClick={() => {
-              bpmAutoStartBlockedRef.current = true;
-              void stopHeartRateStream();
-            }}
-            disabled={rppgStatus === "idle"}
-          >
-            Stop BPM
+            {webcam.isStreaming ? "Restart Camera (rPPG)" : "Start Camera (rPPG)"}
           </button>
         </div>
 
         <div className="button-row calibration-button-row">
-          <button className="secondary-btn" onClick={() => setScreen("setup")}>
+          <button className="secondary-btn" onClick={() => setScreen("title")}>
             Back
           </button>
           {calibration.status === "collecting" ? (

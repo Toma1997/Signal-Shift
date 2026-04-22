@@ -1,6 +1,5 @@
 export type Screen =
   | "title"
-  | "setup"
   | "calibration"
   | "playing"
   | "paused"
