@@ -12,7 +12,7 @@ A neural arcade routing game where falling signal traffic must be directed into 
 
 | Desktop | Mobile |
 | --- | --- |
-| ![Signal Shift desktop gameplay preview](docs/store-assets/preview-desktop.svg) | ![Signal Shift mobile gameplay preview](docs/store-assets/preview-mobile.svg) |
+| ![Signal Shift desktop gameplay preview](docs/store-assets/preview-desktop.png) | ![Signal Shift mobile gameplay preview](docs/store-assets/preview-mobile.png) |
 
 More sizes and store metadata: [`docs/store-assets/`](docs/store-assets/).
 
